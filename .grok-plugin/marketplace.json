@@ -34,6 +34,21 @@
         "type": "local",
         "path": "./plugins/web-app"
       }
+    },
+    {
+      "name": "local-grok-builder",
+      "description": "Choose a GGUF suite that fits this machine, wire it into Grok as a local model, and doctor that choice against today's sources.",
+      "category": "development",
+      "version": "0.1.0",
+      "author": "Joules",
+      "homepage": "https://github.com/jewell-labs/joules/tree/main/plugins/local-grok-builder",
+      "keywords": ["local-grok-builder", "gguf"],
+      "domains": [],
+      "tags": ["models"],
+      "source": {
+        "type": "local",
+        "path": "./plugins/local-grok-builder"
+      }
     }
   ]
 }

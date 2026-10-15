@@ -98,7 +98,7 @@ plugins/<plugin>/
   .mcp.json
 ```
 
-`joules-plugins` is the authoring parent. Its skill is `author`. Its commands are `create`, `evaluate`, `update`, and `score`. `web-app` is the app parent. Its skill is `scaffold`. Its commands are `plan`, `create`, `validate`, and `evaluate`.
+`joules-plugins` is the authoring parent. Its skill is `author`. Its commands are `create`, `evaluate`, `update`, and `score`. `web-app` is the app parent. Its skill is `scaffold`. Its commands are `plan`, `create`, `validate`, and `evaluate`. `local-grok-builder` fits a local GGUF suite. Its skill is `fit`. Its command is `doctor`.
 
 A skill and a command in the same plugin do not share a name. The skill is the procedure. The command is the slash entry for one part of that procedure, and it points at that part instead of copying it.
 
@@ -108,7 +108,7 @@ Copy this shape for a new plugin. Do not invent a second parent name for a part.
 
 ## Catalog
 
-- One plugin you author does one job, at `plugins/<name>/`. This repo ships `joules-plugins` for authoring and `web-app` for a new app. A new app follows the `scaffold` skill and that plugin's plan, create, and validate commands.
+- One plugin you author does one job, at `plugins/<name>/`. This repo ships `joules-plugins` for authoring, `web-app` for a new app, and `local-grok-builder` for a local GGUF suite. A new app follows the `scaffold` skill and that plugin's plan, create, and validate commands.
 - List it in `.grok-plugin/marketplace.json`. Match the fields already in that file.
 - When `.grok-plugin/plugin-index.json` exists, list the components you actually added.
 - A plugin that lives in this repo uses a local source path.
@@ -129,4 +129,5 @@ Run:
 ```bash
 grok plugin validate plugins/joules-plugins
 grok plugin validate plugins/web-app
+grok plugin validate plugins/local-grok-builder
 ```

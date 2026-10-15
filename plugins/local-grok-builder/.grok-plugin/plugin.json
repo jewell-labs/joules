@@ -1,0 +1,13 @@
+{
+  "name": "local-grok-builder",
+  "version": "0.1.0",
+  "description": "Choose a GGUF suite that fits this machine, wire it into Grok as a local model, and doctor that choice against today's sources.",
+  "author": {
+    "name": "Joules",
+    "url": "https://github.com/jewell-labs/joules"
+  },
+  "homepage": "https://github.com/jewell-labs/joules/tree/main/plugins/local-grok-builder",
+  "repository": "https://github.com/jewell-labs/joules",
+  "license": "MIT",
+  "keywords": ["local-grok-builder", "gguf"]
+}

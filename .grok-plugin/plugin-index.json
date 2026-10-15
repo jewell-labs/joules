@@ -70,6 +70,23 @@
           }
         ]
       }
+    },
+    "local-grok-builder": {
+      "version": "0.1.0",
+      "components": {
+        "skills": [
+          {
+            "name": "fit",
+            "description": "Fit a local GGUF suite to this machine and wire the part Grok can run locally."
+          }
+        ],
+        "commands": [
+          {
+            "name": "doctor",
+            "description": "Check the suite against today's sources. Does not download or delete."
+          }
+        ]
+      }
     }
   }
 }
