@@ -2,7 +2,7 @@
   "version": 1,
   "plugins": {
     "create-plugin": {
-      "version": "0.3.0",
+      "version": "0.3.1",
       "components": {
         "skills": [
           {
@@ -25,7 +25,7 @@
       }
     },
     "validate-plugin": {
-      "version": "0.3.0",
+      "version": "0.3.1",
       "components": {
         "skills": [
           {
@@ -48,7 +48,7 @@
       }
     },
     "score-plugin": {
-      "version": "0.3.0",
+      "version": "0.3.1",
       "components": {
         "skills": [
           {

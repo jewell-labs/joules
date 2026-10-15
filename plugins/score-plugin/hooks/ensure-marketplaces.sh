@@ -1,7 +1,7 @@
 #!/bin/sh
-# Add the marketplace URLs in marketplaces.txt and install the plugins in
-# plugins.txt. The hook process exits immediately. The child does the work.
-# A missing grok CLI or a failed command does not block the session.
+# Add the URLs in marketplaces.txt, then install and enable the names in
+# plugins.txt. This file is copied into every Joules plugin. Keep the copies
+# identical. The hook process exits immediately. The child does the work.
 
 if [ "${JOULES_SETUP_CHILD:-}" != 1 ]; then
   JOULES_SETUP_CHILD=1 nohup "$0" </dev/null >/dev/null 2>&1 &
@@ -27,46 +27,33 @@ echo $$ > "$lock/pid"
 trap 'rm -rf "$lock"' EXIT
 
 dir=$(CDPATH= cd -- "$(dirname "$0")" && pwd) || exit 0
-
+added=0
 markets=$(grok plugin marketplace list 2>/dev/null || true)
+
 if [ -f "$dir/marketplaces.txt" ]; then
   while IFS= read -r url || [ -n "$url" ]; do
-    case "$url" in
-      ""|\#*) continue ;;
-    esac
-    if printf '%s\n' "$markets" | grep -F "$url" >/dev/null 2>&1; then
-      continue
-    fi
+    case "$url" in ""|\#*) continue ;; esac
+    printf '%s\n' "$markets" | grep -F -- "$url" >/dev/null 2>&1 && continue
     if grok plugin marketplace add "$url" >/dev/null 2>&1; then
       log "added marketplace $url"
-      markets=$(grok plugin marketplace list 2>/dev/null || true)
+      added=1
     else
       log "marketplace add failed $url"
     fi
   done < "$dir/marketplaces.txt"
 fi
 
-grok plugin marketplace update >/dev/null 2>&1 || log "marketplace update failed"
+# A new source has to be refreshed before its plugin names resolve.
+# Later sessions skip this. Updating with no name refreshes every source.
+if [ "$added" = 1 ]; then
+  grok plugin marketplace update >/dev/null 2>&1 || log "marketplace update failed"
+fi
 
-installed=$(grok plugin list 2>/dev/null || true)
 if [ -f "$dir/plugins.txt" ]; then
   while IFS= read -r name || [ -n "$name" ]; do
-    case "$name" in
-      ""|\#*) continue ;;
-    esac
-    if ! printf '%s\n' "$installed" | grep -E "(^|[[:space:]])${name}([[:space:]]|$)" >/dev/null 2>&1; then
-      if grok plugin install "$name" --trust >/dev/null 2>&1; then
-        log "installed $name"
-        installed=$(grok plugin list 2>/dev/null || true)
-      else
-        log "install failed $name"
-      fi
-    fi
-    if grok plugin enable "$name" >/dev/null 2>&1; then
-      log "enabled $name"
-    else
-      log "enable failed $name"
-    fi
+    case "$name" in ""|\#*) continue ;; esac
+    grok plugin install "$name" --trust >/dev/null 2>&1 || log "install failed $name"
+    grok plugin enable "$name" >/dev/null 2>&1 || log "enable failed $name"
   done < "$dir/plugins.txt"
 fi
 
