@@ -1,0 +1,13 @@
+{
+  "name": "score-plugin",
+  "version": "0.1.0",
+  "description": "Score a Grok plugin from 0 to 100 against the current docs.",
+  "author": {
+    "name": "Joules",
+    "url": "https://github.com/jewell-labs/joules"
+  },
+  "homepage": "https://github.com/jewell-labs/joules/tree/main/plugins/score-plugin",
+  "repository": "https://github.com/jewell-labs/joules",
+  "license": "MIT",
+  "keywords": ["joules", "score-plugin"]
+}

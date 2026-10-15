@@ -1,43 +1,53 @@
 {
   "version": 1,
   "plugins": {
-    "template": {
-      "version": "0.1.1",
+    "create-plugin": {
+      "version": "0.1.0",
       "components": {
         "skills": [
           {
-            "name": "orient",
-            "description": "Map an unfamiliar repository before changing it."
-          }
-        ],
-        "commands": [
-          {
-            "name": "brief",
-            "description": "Ask for a short project brief of the current repository."
-          }
-        ],
-        "agents": [
-          {
-            "name": "reader",
-            "description": "Read-only subagent that returns a project brief."
-          }
-        ],
-        "hooks": [
-          {
-            "name": "SessionStart",
-            "description": "new|load"
+            "name": "create-plugin",
+            "description": "Create one Grok plugin from the current docs."
           }
         ],
         "mcpServers": [
           {
-            "name": "joules-template",
-            "description": "stdio"
+            "name": "joules-docs",
+            "description": "Living docs MCP"
+          }
+        ]
+      }
+    },
+    "validate-plugin": {
+      "version": "0.1.0",
+      "components": {
+        "skills": [
+          {
+            "name": "validate-plugin",
+            "description": "Validate a Grok plugin against the current docs."
           }
         ],
-        "lspServers": [
+        "mcpServers": [
           {
-            "name": "joules-template",
-            "description": "stdio"
+            "name": "joules-docs",
+            "description": "Living docs MCP"
+          }
+        ]
+      }
+    },
+    "score-plugin": {
+      "version": "0.1.0",
+      "components": {
+        "skills": [
+          {
+            "name": "score-plugin",
+            "description": "Score a Grok plugin from 0 to 100."
+          }
+        ],
+        "mcpServers": [
+          {
+            "name": "joules-docs",
+            "description": "Living docs MCP"
           }
         ]
       }

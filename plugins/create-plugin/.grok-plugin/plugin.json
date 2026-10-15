@@ -1,0 +1,13 @@
+{
+  "name": "create-plugin",
+  "version": "0.1.0",
+  "description": "Create one Grok plugin for one job. Reads the current docs before it writes a file.",
+  "author": {
+    "name": "Joules",
+    "url": "https://github.com/jewell-labs/joules"
+  },
+  "homepage": "https://github.com/jewell-labs/joules/tree/main/plugins/create-plugin",
+  "repository": "https://github.com/jewell-labs/joules",
+  "license": "MIT",
+  "keywords": ["joules", "create-plugin"]
+}

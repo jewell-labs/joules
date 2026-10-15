@@ -1,23 +1,53 @@
 {
   "name": "joules",
-  "description": "App-agnostic Grok plugins for agents working in any repository.",
+  "description": "Grok plugins that create, validate, and score other plugins from the current docs.",
   "owner": {
     "name": "Joules"
   },
   "plugins": [
     {
-      "name": "template",
-      "description": "Filled-out sample of every Grok plugin component. Copy this plugin when adding the next one.",
+      "name": "create-plugin",
+      "description": "Create one Grok plugin for one job from the current docs.",
       "category": "development",
-      "version": "0.1.1",
+      "version": "0.1.0",
       "author": "Joules",
-      "homepage": "https://github.com/jewell-labs/joules/tree/main/plugins/template",
-      "keywords": ["joules", "joules template"],
+      "homepage": "https://github.com/jewell-labs/joules/tree/main/plugins/create-plugin",
+      "keywords": ["joules", "create-plugin"],
       "domains": [],
-      "tags": ["template", "reference"],
+      "tags": ["plugins", "authoring"],
       "source": {
         "type": "local",
-        "path": "./plugins/template"
+        "path": "./plugins/create-plugin"
+      }
+    },
+    {
+      "name": "validate-plugin",
+      "description": "Validate a Grok plugin against the current docs and grok plugin validate.",
+      "category": "development",
+      "version": "0.1.0",
+      "author": "Joules",
+      "homepage": "https://github.com/jewell-labs/joules/tree/main/plugins/validate-plugin",
+      "keywords": ["joules", "validate-plugin"],
+      "domains": [],
+      "tags": ["plugins", "validation"],
+      "source": {
+        "type": "local",
+        "path": "./plugins/validate-plugin"
+      }
+    },
+    {
+      "name": "score-plugin",
+      "description": "Score a Grok plugin from 0 to 100 against the current docs.",
+      "category": "development",
+      "version": "0.1.0",
+      "author": "Joules",
+      "homepage": "https://github.com/jewell-labs/joules/tree/main/plugins/score-plugin",
+      "keywords": ["joules", "score-plugin"],
+      "domains": [],
+      "tags": ["plugins", "quality"],
+      "source": {
+        "type": "local",
+        "path": "./plugins/score-plugin"
       }
     }
   ]
