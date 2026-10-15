@@ -15,8 +15,9 @@
 # The sandbox is a copy of fixtures/market beside this script, so the
 # session cannot write the Joules checkout. Cases are cases/<name>.txt.
 # Pass a case name, or no argument for every case. --print shows the command.
-# After a case, the script prints the RUBRIC.md rows it can prove. The
-# other rows are not scored.
+# The raw log is saved under logs/<case>/ (transcript, diff, stderr). A second
+# headless session scores that log in one shot, with tools removed, and fills
+# every RUBRIC.md row. A missing row or a point other than 0 or the cell fails.
 
 set -u
 
@@ -80,7 +81,7 @@ score_case() {
   : > "$log/rows.tsv"
   bad=0
   result=$(result_of "$text")
-  echo "rubric"
+  echo "sandbox"
   case "$kind" in
     create-basic-plugin)
       if [ "$result" = pass ] && grok plugin validate "$work/plugins/hello-note" >/dev/null 2>&1; then mark Load pass; else mark Load fail; fi
@@ -117,7 +118,7 @@ record_status() {
   result=$2
   usage=$3
   when=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-  python3 - "$readme" "$kind" "$result" "$when" "$usage" "$log/rows.tsv" "$cases" <<'PY'
+  python3 - "$readme" "$kind" "$result" "$when" "$usage" "${rows_file:-$log/rows.tsv}" "$cases" <<'PY'
 import os, sys
 path, kind, result, when, usage, rows_path, cases_dir = sys.argv[1:]
 order = ["Load", "Job", "Procedure", "Future-proof", "Catalog", "Safety", "Components", "Hosts", "Behavior"]
@@ -166,6 +167,200 @@ sys.stdout.write(", ".join(parts) if parts else "-")
 PY
 }
 
+save_log() {
+  saved="$here/logs/$kind"
+  rm -rf "$saved"
+  mkdir -p "$saved"
+  cp "$prompt" "$saved/prompt.txt"
+  [ -f "$text" ] && cp "$text" "$saved/reply.txt"
+  [ -f "$err" ] && cp "$err" "$saved/stderr.txt"
+  [ -f "$out" ] && cp "$out" "$saved/grok-out.json"
+  {
+    echo "=== status ==="
+    git -C "$work" status --porcelain
+    echo "=== diff ==="
+    git -C "$work" diff HEAD
+    echo "=== untracked ==="
+    git -C "$work" ls-files --others --exclude-standard | while IFS= read -r f; do
+      [ -n "$f" ] || continue
+      [ -f "$work/$f" ] || continue
+      size=$(wc -c < "$work/$f" | tr -d ' ')
+      echo "=== $f ==="
+      if [ "$size" -lt 20000 ]; then
+        cat "$work/$f"
+      else
+        echo "[$size bytes omitted]"
+      fi
+    done
+  } > "$saved/diff.txt"
+  cp "$rubric" "$saved/RUBRIC.md"
+  python3 - "$saved/grok-out.json" "$saved/transcript.txt" <<'PY'
+import glob, json, os, sys
+out_path, dest = sys.argv[1:]
+data = json.load(open(out_path))
+session_id = data.get("sessionId") or ""
+matches = glob.glob(os.path.expanduser("~/.grok/sessions/*/%s/chat_history.jsonl" % session_id))
+if not matches:
+    sys.stderr.write("no transcript for %s\n" % session_id)
+    sys.exit(1)
+chat = max(matches, key=os.path.getmtime)
+
+def text_of(content):
+    if isinstance(content, str):
+        return content
+    parts = []
+    for block in content or []:
+        if isinstance(block, dict) and block.get("type") == "text":
+            parts.append(block.get("text") or "")
+        elif isinstance(block, str):
+            parts.append(block)
+    return "\n".join(parts)
+
+def clip(text, limit):
+    text = (text or "").strip()
+    if len(text) <= limit:
+        return text
+    return text[:limit] + "\n...[truncated]"
+
+def user_text(raw):
+    for tag in ("<skill_information>", "<system-reminder>"):
+        at = raw.find(tag)
+        if at >= 0:
+            raw = raw[:at]
+    raw = raw.strip()
+    if raw.startswith("<"):
+        return ""
+    return raw
+
+chunks = []
+for line in open(chat):
+    event = json.loads(line)
+    kind = event.get("type")
+    if kind == "user":
+        body = user_text(text_of(event.get("content")))
+        if body:
+            chunks.append("## User\n" + body)
+    elif kind == "assistant":
+        body = text_of(event.get("content")).strip()
+        if body:
+            chunks.append("## Assistant\n" + body)
+        for call in event.get("tool_calls") or []:
+            args = call.get("arguments")
+            if not isinstance(args, str):
+                args = json.dumps(args, sort_keys=True)
+            chunks.append("## Tool\nname: %s\narguments: %s" % (call.get("name") or "", clip(args, 12000)))
+    elif kind == "tool_result":
+        chunks.append("## Tool result\n" + clip(text_of(event.get("content")), 12000))
+if not chunks:
+    sys.stderr.write("empty transcript for %s\n" % session_id)
+    sys.exit(1)
+open(dest, "w").write("\n\n".join(chunks) + "\n")
+PY
+}
+
+evaluate_log() {
+  saved=$1
+  schema=$(tr -d '\n' < "$here/eval-schema.json")
+  eval_cwd=$(mktemp -d "${TMPDIR:-/tmp}/joules-plugin-eval.XXXXXX")
+  {
+    cat "$here/evaluate-run.txt"
+    echo
+    echo "===== RUBRIC.md ====="
+    sed 's/^/  /' "$saved/RUBRIC.md"
+    echo
+    echo "===== transcript.txt ====="
+    sed 's/^/  /' "$saved/transcript.txt"
+    echo
+    echo "===== diff.txt ====="
+    sed 's/^/  /' "$saved/diff.txt"
+    echo
+    echo "===== stderr.txt ====="
+    if [ -f "$saved/stderr.txt" ]; then
+      sed 's/^/  /' "$saved/stderr.txt"
+    fi
+  } > "$saved/eval-prompt.txt"
+  echo "eval"
+  eval_status=0
+  grok \
+    --cwd "$eval_cwd" \
+    --prompt-file "$saved/eval-prompt.txt" \
+    --verbatim \
+    --json-schema "$schema" \
+    --output-format json \
+    --max-turns 2 \
+    --no-subagents \
+    --disable-web-search \
+    --always-approve \
+    --reasoning-effort low \
+    --tools __none__ \
+    --deny 'MCPTool(*)' \
+    --system-prompt-override 'You score one finished test run. The log is in the user message. Return only the JSON object. Do not use tools.' \
+    >"$saved/eval-out.json" 2>"$saved/eval-err.txt" || eval_status=$?
+  rm -rf "$eval_cwd"
+  if [ "$eval_status" != 0 ]; then
+    echo "FAIL $plugin/$kind (eval grok exit)"
+    tail -n 20 "$saved/eval-err.txt" >&2
+    return 1
+  fi
+  python3 - "$saved/eval-out.json" "$saved/scores.tsv" "$rubric" <<'PY'
+import json, re, sys
+out_path, tsv_path, rubric_path = sys.argv[1:]
+data = json.load(open(out_path))
+if data.get("type") == "error":
+    sys.stderr.write((data.get("message") or "error") + "\n")
+    sys.exit(1)
+scores = data.get("structuredOutput")
+if isinstance(scores, str):
+    try:
+        scores = json.loads(scores)
+    except json.JSONDecodeError:
+        scores = None
+if not isinstance(scores, dict) or not scores:
+    raw = data.get("text") or ""
+    try:
+        scores = json.loads(raw)
+    except json.JSONDecodeError:
+        start, end = raw.find("{"), raw.rfind("}")
+        if start < 0 or end < start:
+            sys.stderr.write("eval did not return JSON\n")
+            sys.exit(1)
+        scores = json.loads(raw[start:end + 1])
+caps = {}
+for line in open(rubric_path):
+    match = re.match(r"\| ([^|]+?) \((\d+)\)", line)
+    if match:
+        caps[match.group(1)] = int(match.group(2))
+if not caps:
+    sys.stderr.write("rubric has no rows\n")
+    sys.exit(1)
+missing = [name for name in caps if name not in scores]
+if missing:
+    sys.stderr.write("missing rows: %s\n" % ", ".join(missing))
+    sys.exit(1)
+bad = False
+lines = []
+seen = {}
+for name, cap in caps.items():
+    cell = scores.get(name) or {}
+    points = cell.get("points") if isinstance(cell, dict) else None
+    evidence = (cell.get("evidence") or "").strip() if isinstance(cell, dict) else ""
+    if isinstance(points, bool) or not isinstance(points, int) or points not in (0, cap) or len(evidence) < 12:
+        sys.stderr.write("%s invalid points=%r\n" % (name, points))
+        bad = True
+        points = 0
+    seen.setdefault(evidence, []).append(name)
+    lines.append("%s\t%s" % (name, points))
+    print("%-14s %s | %s" % (name, points, evidence))
+for evidence, names in seen.items():
+    if evidence and len(names) > 3:
+        sys.stderr.write("same evidence on %s\n" % ", ".join(names))
+        bad = True
+open(tsv_path, "w").write("\n".join(lines) + "\n")
+if bad:
+    sys.exit(1)
+PY
+}
+
 run_one() {
   kind=$1
   prompt="$cases/$kind.txt"
@@ -187,6 +382,8 @@ run_one() {
     printf 'grok plugin enable %s\n' "$plugin"
     printf "grok --cwd %s --prompt-file %s --verbatim --always-approve --output-format json --max-turns 16 --no-subagents --disable-web-search --deny '%s' --deny '%s' --deny '%s' --deny '%s' --deny '%s'\n" \
       "$work" "$prompt" 'Bash(grok plugin install*)' 'Bash(grok plugin marketplace*)' 'Bash(git push*)' 'Bash(curl*)' 'Bash(wget*)'
+    printf "grok --cwd <tmp> --prompt-file logs/%s/eval-prompt.txt --verbatim --json-schema <eval-schema.json> --output-format json --max-turns 2 --no-subagents --disable-web-search --always-approve --reasoning-effort low --tools __none__ --deny '%s'\n" \
+      "$kind" 'MCPTool(*)'
     rm -rf "$work" "$log"
     return
   fi
@@ -244,7 +441,20 @@ PY
   fi
 
   usage=$(usage_of "$out" 2>/dev/null || true)
-  if score_case "$kind" "$work" "$text"; then
+  if ! save_log; then
+    echo "FAIL $plugin/$kind (transcript)"
+    record_status "$kind" fail "$usage"
+    fail=$((fail + 1))
+    echo "kept $work"
+    echo "log $saved"
+    return
+  fi
+  sandbox_ok=0
+  score_case "$kind" "$work" "$text" && sandbox_ok=1
+  rows_file="$saved/scores.tsv"
+  eval_ok=0
+  evaluate_log "$saved" && eval_ok=1
+  if [ "$sandbox_ok" = 1 ] && [ "$eval_ok" = 1 ]; then
     echo "PASS $plugin/$kind"
     record_status "$kind" pass "$usage"
     rm -rf "$work" "$log"
@@ -255,7 +465,7 @@ PY
     cat "$text"
     echo
     echo "kept $work"
-    echo "log $log"
+    echo "log $saved"
     fail=$((fail + 1))
   fi
 }

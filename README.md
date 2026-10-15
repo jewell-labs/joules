@@ -19,7 +19,7 @@ grok plugin install joules-plugins --trust
 
 ## Add a plugin
 
-Search the official catalog first. Then `/joules-plugins` with `create`, `evaluate`, `update`, or `score`. `grok plugin validate plugins/<name>` is the manifest check. After you ask to install, `grok inspect` and `/joules-plugins` on a safe input are the behavior check. `plugins/joules-plugins/tests/run.sh` runs that check headless. Cases are `plugins/joules-plugins/tests/cases/<name>.txt`. It writes the points it proved, and the token usage, into the plugin README.
+Search the official catalog first. Then `/joules-plugins` with `create`, `evaluate`, `update`, or `score`. `grok plugin validate plugins/<name>` is the manifest check. After you ask to install, `grok inspect` and `/joules-plugins` on a safe input are the behavior check. `plugins/joules-plugins/tests/run.sh` runs that check headless. Cases are `plugins/joules-plugins/tests/cases/<name>.txt`. It saves the raw log and asks Grok to fill every rubric row from that log, then writes those points and the token usage into the plugin README.
 
 From this checkout, follow `AGENTS.md`.
 

@@ -10,11 +10,11 @@ Then run `/joules-plugins` with `create`, `evaluate`, `update`, or `score`. On t
 
 ## Last test run
 
-`tests/run.sh` rewrites the table below after each prompt in `tests/cases/`. A number is the rubric points that prompt proved. `-` means this prompt does not score that row. Usage is uncached input tokens, output tokens, turns, and cost when the headless JSON reported them.
+`tests/run.sh` runs each prompt in `tests/cases/`, saves the raw log under `tests/logs/`, and asks Grok to fill every rubric row from that log. A number is those points. Usage is uncached input tokens, output tokens, turns, and cost when the headless JSON reported them.
 
 <!-- joules-test-status:start -->
 | Prompt | When | Result | Load | Job | Procedure | Future-proof | Catalog | Safety | Components | Hosts | Behavior | Usage |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| create-basic-plugin | 2026-10-15T01:42:48Z | pass | 15 | 15 | - | - | 10 | 10 | - | - | 5 | 47700 in, 3498 out, 6 turns, $0.05582664 |
-| evaluate-sample-plugin | 2026-10-15T01:42:59Z | pass | 15 | - | - | - | - | 10 | - | - | 5 | 18600 in, 457 out, 2 turns, $0.01714892 |
+| create-basic-plugin | 2026-10-15T02:04:07Z | pass | 15 | 15 | 15 | 15 | 10 | 10 | 10 | 5 | 5 | 90953 in, 6765 out, 14 turns, $0.13383488 |
+| evaluate-sample-plugin | 2026-10-15T02:01:24Z | pass | 15 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 18547 in, 440 out, 2 turns, $0.0170782 |
 <!-- joules-test-status:end -->
