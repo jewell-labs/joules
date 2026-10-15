@@ -19,6 +19,12 @@ grok plugin install joules-plugins --trust
 | [web-app](plugins/web-app) | Creates a Void pages app in a directory. The app is Solid on Cloudflare Workers, releases the branches it lists, and serves one public HTTP healthcheck. |
 | [local-grok-builder](plugins/local-grok-builder) | Fits a local GGUF suite to this machine and wires the chat Grok can run locally. `/doctor` only reports. |
 
+## Apps
+
+| App | What it shows |
+| --- | --- |
+| [jev-classify](apps/jev-classify) | A lay page for Jev-based classification. It compares a live local Clef decision with a live local Grok reply. It is not a plugin. |
+
 ## Add a plugin
 
 Search the official catalog first. Then `/author` with `create`, `evaluate`, `update`, or `score`. `grok plugin validate plugins/<name>` is the manifest check. After you ask to install, `grok inspect` and `/author` on a safe input are the behavior check. The plugin README table is the run record. The prompt in that table is the whole job. Nothing else is stored.
@@ -38,6 +44,7 @@ AGENTS.md                            rules for agents in this repo
 .grok-plugin/marketplace.json        catalog Grok reads
 .grok-plugin/plugin-index.json       component list shown before install
 plugins/<name>/                      one plugin, the public parent
+apps/<name>/                         one app, not a plugin
 ```
 
 A plugin name is the parent a person installs. A skill or command inside it is named for its job, not for the plugin. The rule is in [AGENTS.md](AGENTS.md).
