@@ -125,6 +125,7 @@ tar -C "$template_abs" -cf - \
   --exclude .wrangler \
   --exclude dist \
   --exclude .output \
+  --exclude .tanstack \
   --exclude worker-configuration.d.ts \
   --exclude .DS_Store \
   . | tar -C "$dest_abs" -xf -

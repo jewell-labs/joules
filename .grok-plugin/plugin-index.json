@@ -25,12 +25,12 @@
       }
     },
     "web-app": {
-      "version": "0.3.2",
+      "version": "0.4.0",
       "components": {
         "skills": [
           {
             "name": "web-app",
-            "description": "Create an app from the template, or make an app pass the web-app check. The template releases listed branches."
+            "description": "Create an app from the template. The copy releases listed branches and serves one public HTTP healthcheck."
           }
         ],
         "commands": [

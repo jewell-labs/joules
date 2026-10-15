@@ -2,50 +2,43 @@
 name: web-app
 description: >
   Create a TanStack Start app on Cloudflare Workers from the web-app
-  template, or make an existing app pass the web-app check. The template
-  carries the release workflow for branches it lists. Use when the
-  user wants a new app from that template, wants an app made 100% compliant,
-  or runs /web-app.
+  template. The copy carries the release workflow for branches it lists
+  and one public HTTP healthcheck any external bot can call. Use when
+  the user wants a new app from that template or runs /web-app.
 when-to-use: >
-  create a web app, copy the web-app template, make this app compliant,
-  TanStack Start on Cloudflare Workers, /web-app
+  create a web app, copy the web-app template, TanStack Start on
+  Cloudflare Workers, /web-app
 argument-hint: "[app directory]"
 metadata:
   author: Joules
-  short-description: Create an app from the template, or pass the check
+  short-description: Create an app from the template
 ---
 
 # Web app
 
-Do one of two jobs.
+Create a new app, or check an existing copy.
 
-This plugin sits on `cloudflare`, `cloudflare-web-apps`, `wrangler`, and `stripe`. Product choice stays in `cloudflare`. TanStack Start and Solid wiring stay in `cloudflare-web-apps`. Wrangler commands stay in `wrangler`. Payments stay in `stripe`. When one of those skills is not installed, open the page that skill cites and follow it. Do not copy those steps into this plugin.
+This plugin sits on `cloudflare`, `cloudflare-web-apps`, and `wrangler`. Product choice stays in `cloudflare`. TanStack Start and Solid wiring stay in `cloudflare-web-apps`. Wrangler commands stay in `wrangler`. This template does not add payments. When the user wants payments later, that stays in `stripe`. When one of those skills is not installed, open the page that skill cites and follow it. Do not copy those steps into this plugin.
 
 The plugin root is the directory that contains `skills/web-app/SKILL.md`.
 
 ## Create
 
-When the user wants a new app, follow `commands/create.md` in the plugin root. That command runs `scripts/create.sh`, which copies `template/`. The copy includes `.github/workflows/release.yml`. That workflow is the extra step on top of `cloudflare`, `cloudflare-web-apps`, and `wrangler`. The scripts still run when those plugins are not installed.
+When the user wants a new app, follow `commands/create.md` in the plugin root. That command runs `scripts/create.sh`, which copies `template/`. The copy includes `.github/workflows/release.yml` and one MCP server on the worker. The workflow is the extra step on top of `cloudflare`, `cloudflare-web-apps`, and `wrangler`. The scripts still run when those plugins are not installed.
 
-## Check an existing app
+Ask for the destination directory, the package name, and the title in the reply, then stop. Do not guess them, do not write the app, and do not run `scripts/create.sh` until the user has answered each one.
 
-Fix only the failures the check prints.
+## Healthcheck
 
-### Inputs
+The copy serves one MCP server on the worker's public HTTP path. Any external bot can call its one healthcheck. A stdio server does not satisfy that. The tool reads no secret, session, or database. Do not add a second tool, a Durable Object, or a credential for it. The handler and the tool schema stay on the current page, not in this skill:
 
-The app directory. When the user does not name one, use the current directory.
+- https://developers.cloudflare.com/agents/model-context-protocol/apis/handler-api/
 
-### Steps
+Follow `agents-sdk` and `cloudflare-mcp` when those skills are installed. When they are not, open that page and follow it.
 
-1. From this skill file, the check is `../../tests/check.sh`.
-2. Run `sh <plugin-root>/tests/check.sh <app>`.
-3. Fix every failure line. Leave passing files alone. `template/` under the plugin root is one tree that passes. Use it as a shape reference. Do not replace the app with that tree.
-4. Follow the official skill that owns the failure. Leave scaffold commands, package versions, and wrangler fields on the page you opened.
-5. Run the check again. Stop when it prints `ok`.
+## An existing app
 
-### Return
-
-Return the app path, the check output, and the files you changed.
+The app directory is the one the user names, or the current directory. Run that app's `npm test` and `scripts/verify.sh`. Fix only the failures they print. Do not replace the app with `template/`. Leave scaffold commands, package versions, and wrangler fields on the page you opened.
 
 ## Release
 

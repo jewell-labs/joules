@@ -14,10 +14,13 @@
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.26.0",
+    "@modelcontextprotocol/server": "^2.3.1",
     "@tanstack/solid-router": "1.170.41",
     "@tanstack/solid-start": "1.169.2",
+    "agents": "^0.28.1",
     "drizzle-orm": "^0.44.6",
-    "solid-js": "^1.9.12"
+    "solid-js": "^1.9.12",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@tanstack/router-cli": "^1.133.21",

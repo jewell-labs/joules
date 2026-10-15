@@ -1,520 +1,413 @@
 #!/bin/sh
-# Copy template/, apply one mutation, and ask /web-app to fix it.
+# One prompt: "create a web app".
 #
-#   tests/run.sh --check [name]
-#     Copy the template. tests/check.sh must print ok. Apply each script in
-#     tests/mutations, or the one named. The check must then fail.
-#     Also run scripts/create.sh and confirm the copy passes the check.
-#     This mode does not call grok.
+# The agent must ask for the destination directory, the package name, and the
+# title before it writes the app. This script is the oracle. It is not a second
+# Grok session, and it does not invent answers. It resumes the same session
+# with the fixed answers below, then checks the directory the script created.
 #
-#   tests/run.sh [--print] [name]
-#     Install and enable this plugin, copy the example, apply the mutation,
-#     and run:
+#   grok --cwd <sandbox> --prompt-file <case> --verbatim --always-approve \
+#     --output-format json --max-turns 16 --no-subagents --disable-web-search \
+#     --disallowed-tools ask_user_question \
+#     --deny 'Bash(grok plugin install*)' \
+#     --deny 'Bash(grok plugin marketplace*)' \
+#     --deny 'Bash(git push*)' \
+#     --deny 'Bash(curl*)' --deny 'Bash(wget*)' \
+#     --deny 'Bash(npx wrangler deploy*)' \
+#     --deny 'Bash(wrangler deploy*)' \
+#     --deny 'Bash(npm run deploy*)'
 #
-#       grok --cwd <copy> --prompt-file tests/comply.txt --verbatim \
-#         --always-approve --output-format json --max-turns 16 \
-#         --no-subagents --disable-web-search \
-#         --deny 'Bash(grok plugin install*)' \
-#         --deny 'Bash(grok plugin marketplace*)' \
-#         --deny 'Bash(git push*)' \
-#         --deny 'Bash(curl*)' --deny 'Bash(wget*)' \
-#         --deny 'Bash(npx wrangler deploy*)' \
-#         --deny 'Bash(wrangler deploy*)' \
-#         --deny 'Bash(npm run deploy*)'
-#
-#     The run passes when tests/check.sh prints ok. Logs are tests/logs/<name>/.
+# ask_user_question is removed so a headless run cannot wait on a question
+# card. The oracle answers the reply in the same session.
+# web-app is installed for this process's run and removed afterward when it
+# was not already installed. The enabled list is put back either way.
 
 set -u
 
 here=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 plugin_dir=$(dirname "$here")
 plugin=$(basename "$plugin_dir")
-example="$plugin_dir/template"
+case_file="$here/cases/create-web-app.txt"
 create="$plugin_dir/scripts/create.sh"
-mutations="$here/mutations"
-check="$here/check.sh"
-prompt="$here/comply.txt"
+config=${GROK_CONFIG:-$HOME/.grok/config.toml}
+name=acme-app
+title='Acme App'
 
-mode=agent
-if [ "${1:-}" = "--check" ]; then
-  mode=check
-  shift
-elif [ "${1:-}" = "--print" ]; then
-  mode=print
-  shift
-fi
-want="${1:-}"
-
-fail=0
-ran=0
-
-copy_app() {
-  dest=$1
-  rm -rf "$dest"
-  mkdir -p "$dest"
-  tar -C "$example" -cf - \
-    --exclude node_modules \
-    --exclude .wrangler \
-    --exclude dist \
-    --exclude .output \
-    --exclude worker-configuration.d.ts \
-    --exclude .DS_Store \
-    . | tar -C "$dest" -xf -
-}
-
-pipeline_ok() {
-  app=$1
-  for file in \
-    .github/workflows/release.yml \
-    deploy/branches.json \
-    scripts/verify.sh \
-    scripts/screenshot.sh \
-    scripts/release.sh \
-    scripts/branch-env.sh \
-    scripts/notify.sh \
-    scripts/version.sh \
-    tests/ready.test.ts
-  do
-    [ -f "$app/$file" ] || return 1
-  done
-  (cd "$app" && node --test tests/ready.test.ts) || return 1
-  shim=$(mktemp -d "${TMPDIR:-/tmp}/joules-web-app-shim.XXXXXX")
-  printf '%s\n' '#!/bin/sh' 'echo called >> "$DEPLOY_LOG"' 'exit 99' > "$shim/npx"
-  cp "$shim/npx" "$shim/wrangler"
-  chmod +x "$shim/npx" "$shim/wrangler"
-  log=$(mktemp "${TMPDIR:-/tmp}/joules-web-app-deploy.XXXXXX")
-  : > "$log"
-  out=$(DEPLOY_LOG="$log" PATH="$shim:$PATH" BRANCH=not-a-mapped-branch sh "$app/scripts/release.sh") || {
-    rm -rf "$shim" "$log"
-    return 1
-  }
-  printf '%s\n' "$out" | grep -q 'skip deploy' || { rm -rf "$shim" "$log"; return 1; }
-  printf '%s\n' "$out" | grep -q 'wrangler deploy' && { rm -rf "$shim" "$log"; return 1; }
-  [ ! -s "$log" ] || { rm -rf "$shim" "$log"; return 1; }
-  out=$(DEPLOY_LOG="$log" PATH="$shim:$PATH" RELEASE_PLAN=1 BRANCH=main sh "$app/scripts/release.sh") || {
-    rm -rf "$shim" "$log"
-    return 1
-  }
-  printf '%s\n' "$out" | grep -q 'wrangler deploy' || { rm -rf "$shim" "$log"; return 1; }
-  printf '%s\n' "$out" | grep -q 'production' || { rm -rf "$shim" "$log"; return 1; }
-  [ ! -s "$log" ] || { rm -rf "$shim" "$log"; return 1; }
-  out=$(RELEASE_PLAN=1 BRANCH=staging sh "$app/scripts/release.sh") || { rm -rf "$shim" "$log"; return 1; }
-  printf '%s\n' "$out" | grep -q 'environment=staging' || { rm -rf "$shim" "$log"; return 1; }
-  python3 - "$app/.github/workflows/release.yml" <<'PY' || { rm -rf "$shim" "$log"; return 1; }
-import re, sys
-text = open(sys.argv[1], encoding="utf-8").read()
-parts = re.split(r"(?m)^(?=  [A-Za-z0-9_-]+:\s*$)", text)
-jobs = {}
-for part in parts:
-    match = re.match(r"  ([A-Za-z0-9_-]+):\s*\n", part)
-    if match:
-        jobs[match.group(1)] = part
-
-def job_of(needle):
-    owners = [name for name, body in jobs.items() if needle in body]
-    if len(owners) != 1:
-        sys.exit(1)
-    return jobs[owners[0]]
-
-def steps_of(body):
-    steps = []
-    current = []
-    for line in body.splitlines():
-        if line.startswith("      - "):
-            if current:
-                steps.append("\n".join(current))
-            current = [line]
-        elif current and (line.startswith("        ") or line.strip() == ""):
-            current.append(line)
-        else:
-            if current:
-                steps.append("\n".join(current))
-            current = []
-    if current:
-        steps.append("\n".join(current))
-    return steps
-
-def step_with(body, needle):
-    matches = [step for step in steps_of(body) if needle in step]
-    if len(matches) != 1:
-        sys.exit(1)
-    return matches[0]
-
-if "notify" in jobs:
-    sys.exit(1)
-check = job_of("scripts/release.sh check")
-deploy = job_of("scripts/release.sh deploy")
-if "scripts/release.sh notify" not in deploy:
-    sys.exit(1)
-for secret in ("CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID", "DEPLOY_WEBHOOK_URL"):
-    if secret in check:
-        sys.exit(1)
-if "environment:" in check:
-    sys.exit(1)
-if "environment: release" not in deploy:
-    sys.exit(1)
-if "npm run build" in deploy or "release.sh check" in deploy:
-    sys.exit(1)
-
-def before_deploy(body, step):
-    steps = steps_of(body)
-    deploy_at = [i for i, item in enumerate(steps) if "scripts/release.sh deploy" in item]
-    found = [i for i, item in enumerate(steps) if item == step]
-    if len(deploy_at) != 1 or len(found) != 1 or found[0] >= deploy_at[0]:
-        sys.exit(1)
-
-def exact_line(step, line):
-    if line not in [item.strip() for item in step.splitlines()]:
-        sys.exit(1)
-
-worker_up = step_with(check, "name: worker-dist")
-redirect_up = step_with(check, "name: wrangler-redirect")
-if "upload-artifact" not in worker_up or "upload-artifact" not in redirect_up:
-    sys.exit(1)
-exact_line(worker_up, "path: dist")
-exact_line(redirect_up, "path: .wrangler/deploy/config.json")
-if "include-hidden-files: true" not in redirect_up:
-    sys.exit(1)
-worker_dl = step_with(deploy, "name: worker-dist")
-redirect_dl = step_with(deploy, "name: wrangler-redirect")
-if "download-artifact" not in worker_dl or "download-artifact" not in redirect_dl:
-    sys.exit(1)
-exact_line(worker_dl, "path: dist")
-exact_line(redirect_dl, "path: .wrangler/deploy")
-before_deploy(deploy, worker_dl)
-before_deploy(deploy, redirect_dl)
-deploy_step = step_with(deploy, "scripts/release.sh deploy")
-notify_step = step_with(deploy, "scripts/release.sh notify")
-if "DEPLOY_WEBHOOK_URL" in deploy_step:
-    sys.exit(1)
-if "CLOUDFLARE_API_TOKEN" in notify_step or "CLOUDFLARE_ACCOUNT_ID" in notify_step:
-    sys.exit(1)
-PY
-  : > "$log"
-  deploy_status=0
-  deploy_out=$(DEPLOY_LOG="$log" PATH="$shim:$PATH" BRANCH=main sh "$app/scripts/release.sh" deploy 2>&1) || deploy_status=$?
-  [ "$deploy_status" != 0 ] || { rm -rf "$shim" "$log"; return 1; }
-  printf '%s\n' "$deploy_out" | grep -q 'skip deploy' && { rm -rf "$shim" "$log"; return 1; }
-  [ ! -s "$log" ] || { rm -rf "$shim" "$log"; return 1; }
-  if sh "$app/scripts/verify.sh" --built >/dev/null 2>&1; then
-    rm -rf "$shim" "$log"
-    return 1
-  fi
-  mkdir -p "$app/dist/client"
-  cp "$app/public/manifest.webmanifest" "$app/public/offline.html" "$app/public/sw.js" "$app/dist/client/"
-  built=$(sh "$app/scripts/verify.sh" --built) || { rm -rf "$shim" "$log"; return 1; }
-  printf '%s\n' "$built" | grep -q '^ok$' || { rm -rf "$shim" "$log"; return 1; }
-  printf '%s\n' 'rk_live_abc' > "$app/public/leak.txt"
-  verify_status=0
-  verify_out=$(sh "$app/scripts/verify.sh" --built 2>&1) || verify_status=$?
-  rm -f "$app/public/leak.txt"
-  [ "$verify_status" != 0 ] || { rm -rf "$shim" "$log"; return 1; }
-  printf '%s\n' "$verify_out" | grep -q 'a secret is in the tree' || { rm -rf "$shim" "$log"; return 1; }
-  [ ! -e "$app/public/leak.txt" ] || { rm -rf "$shim" "$log"; return 1; }
-  printf '%s\n' 'STRIPE_SECRET_KEY=sk_live_localonly' > "$app/.dev.vars"
-  printf '%s\n' 'AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE' > "$app/.env"
-  built=$(sh "$app/scripts/verify.sh" --built) || { rm -f "$app/.dev.vars" "$app/.env"; rm -rf "$shim" "$log"; return 1; }
-  rm -f "$app/.dev.vars" "$app/.env"
-  printf '%s\n' "$built" | grep -q '^ok$' || { rm -rf "$shim" "$log"; return 1; }
-  [ ! -e "$app/.dev.vars" ] && [ ! -e "$app/.env" ] || { rm -rf "$shim" "$log"; return 1; }
-  git -C "$app" init -q
-  printf '%s\n' 'sk_live_localonly' > "$app/.dev.vars"
-  built=$(sh "$app/scripts/verify.sh" --built) || {
-    rm -f "$app/.dev.vars"
-    rm -rf "$app/.git" "$shim" "$log"
-    return 1
-  }
-  rm -f "$app/.dev.vars"
-  printf '%s\n' "$built" | grep -q '^ok$' || { rm -rf "$app/.git" "$shim" "$log"; return 1; }
-  printf '%s\n' 'sk_live_onlyhere' > "$app/.env"
-  git -C "$app" add -f -- .env
-  verify_status=0
-  verify_out=$(sh "$app/scripts/verify.sh" --built 2>&1) || verify_status=$?
-  git -C "$app" rm -q -f --cached -- .env >/dev/null 2>&1 || true
-  rm -f "$app/.env"
-  rm -rf "$app/.git"
-  [ "$verify_status" != 0 ] || { rm -rf "$shim" "$log"; return 1; }
-  printf '%s\n' "$verify_out" | grep -q 'a secret is in the tree' || { rm -rf "$shim" "$log"; return 1; }
-  [ ! -e "$app/.env" ] && [ ! -d "$app/.git" ] || { rm -rf "$shim" "$log"; return 1; }
-  cp "$app/.dev.vars.example" "$log.example"
-  printf '\n%s\n' 'sk_live_example' >> "$app/.dev.vars.example"
-  verify_status=0
-  verify_out=$(sh "$app/scripts/verify.sh" --built 2>&1) || verify_status=$?
-  cp "$log.example" "$app/.dev.vars.example"
-  rm -f "$log.example"
-  [ "$verify_status" != 0 ] || { rm -rf "$shim" "$log"; return 1; }
-  printf '%s\n' "$verify_out" | grep -q 'a secret is in the tree' || { rm -rf "$shim" "$log"; return 1; }
-  : > "$log"
-  deploy_status=0
-  deploy_out=$(DEPLOY_LOG="$log" PATH="$shim:$PATH" BRANCH=main sh "$app/scripts/release.sh" deploy 2>&1) || deploy_status=$?
-  [ "$deploy_status" != 0 ] || { rm -rf "$shim" "$log"; return 1; }
-  grep -q 'called' "$log" || { rm -rf "$shim" "$log"; return 1; }
-  hook='https://hooks.example/pipeline-ok-marker'
-  : > "$log"
-  printed=$(NOTIFY_PRINT=1 DEPLOY_WEBHOOK_URL="$hook" BRANCH=main sh "$app/scripts/release.sh" notify 2>"$log") || {
-    rm -rf "$shim" "$log"
-    return 1
-  }
-  printf '%s\n' "$printed" | grep -q '"environment": "production"' || { rm -rf "$shim" "$log"; return 1; }
-  printf '%s\n%s\n' "$printed" "$(cat "$log")" | grep -q "$hook" && { rm -rf "$shim" "$log"; return 1; }
-  python3 - "$app/package.json" <<'PY'
-import json, sys
-path = sys.argv[1]
-data = json.load(open(path, encoding="utf-8"))
-data["version"] = "1.2.3+meta"
-json.dump(data, open(path, "w", encoding="utf-8"))
-PY
-  tagged=$(RELEASE_PLAN=1 BRANCH=main sh "$app/scripts/release.sh") || { rm -rf "$shim" "$log"; return 1; }
-  printf '%s\n' "$tagged" | grep -q 'wrangler deploy --tag meta' && { rm -rf "$shim" "$log"; return 1; }
-  printf '%s\n' "$tagged" | grep -q -- '--message 1.2.3+meta+' || { rm -rf "$shim" "$log"; return 1; }
-  python3 - "$app/package.json" <<'PY'
-import json, sys
-path = sys.argv[1]
-data = json.load(open(path, encoding="utf-8"))
-data["version"] = "0.1.0"
-json.dump(data, open(path, "w", encoding="utf-8"))
-PY
-  python3 - "$app/deploy/branches.json" <<'PY'
-import json, sys
-path = sys.argv[1]
-data = json.load(open(path, encoding="utf-8"))
-data["main"] = ""
-json.dump(data, open(path, "w", encoding="utf-8"))
-PY
-  bad_status=0
-  bad_out=$(DEPLOY_LOG="$log" PATH="$shim:$PATH" BRANCH=main sh "$app/scripts/release.sh" 2>&1) || bad_status=$?
-  [ "$bad_status" != 0 ] || { rm -rf "$shim" "$log"; return 1; }
-  printf '%s\n' "$bad_out" | grep -q 'skip deploy' && { rm -rf "$shim" "$log"; return 1; }
-  [ ! -s "$log" ] || { rm -rf "$shim" "$log"; return 1; }
-  python3 - "$app/deploy/branches.json" <<'PY'
-import json, sys
-path = sys.argv[1]
-data = json.load(open(path, encoding="utf-8"))
-data["main"] = "production"
-json.dump(data, open(path, "w", encoding="utf-8"))
-PY
-  if DEPLOY_WEBHOOK_URL= APP_NAME=acme BRANCH=main ENVIRONMENT=production APP_VERSION=0.1.0+abc \
-    sh "$app/scripts/notify.sh" >/dev/null 2>&1
-  then
-    rm -rf "$shim" "$log"
-    return 1
-  fi
-  if NOTIFY_PRINT=1 DEPLOY_WEBHOOK_URL= APP_NAME=acme BRANCH=main ENVIRONMENT=production APP_VERSION=0.1.0+abc \
-    sh "$app/scripts/notify.sh" >/dev/null 2>&1
-  then
-    rm -rf "$shim" "$log"
-    return 1
-  fi
-  hook='https://hooks.example/pipeline-ok-marker'
-  printed=$(NOTIFY_PRINT=1 DEPLOY_WEBHOOK_URL="$hook" APP_NAME=acme BRANCH=main ENVIRONMENT=production APP_VERSION=0.1.0+abc DEPLOY_RESULT=deployed \
-    sh "$app/scripts/notify.sh" 2>"$log") || { rm -rf "$shim" "$log"; return 1; }
-  printf '%s\n' "$printed" | grep -q '"app": "acme"' || { rm -rf "$shim" "$log"; return 1; }
-  printf '%s\n' "$printed" | grep -q '"branch": "main"' || { rm -rf "$shim" "$log"; return 1; }
-  printf '%s\n' "$printed" | grep -q '"environment": "production"' || { rm -rf "$shim" "$log"; return 1; }
-  printf '%s\n' "$printed" | grep -q '"version": "0.1.0+abc"' || { rm -rf "$shim" "$log"; return 1; }
-  printf '%s\n' "$printed" | grep -q '"result": "deployed"' || { rm -rf "$shim" "$log"; return 1; }
-  printf '%s\n%s\n' "$printed" "$(cat "$log")" | grep -q "$hook" && { rm -rf "$shim" "$log"; return 1; }
-  printf '%s\n' "$printed" | grep -q 'DEPLOY_WEBHOOK_URL' && { rm -rf "$shim" "$log"; return 1; }
-  secret='SECRETTOKEN123'
-  : > "$log"
-  if DEPLOY_WEBHOOK_URL="https://user:${secret}@hooks.example/hook" APP_NAME=acme BRANCH=main ENVIRONMENT=production APP_VERSION=0.1.0+abc \
-    sh "$app/scripts/notify.sh" >"$log.out" 2>"$log.err"
-  then
-    rm -rf "$shim" "$log" "$log.out" "$log.err"
-    return 1
-  fi
-  if grep -q "$secret" "$log.out" "$log.err"; then
-    rm -rf "$shim" "$log" "$log.out" "$log.err"
-    return 1
-  fi
-  python3 - "$app" "$secret" <<'PY' || { rm -rf "$shim" "$log" "$log.out" "$log.err"; return 1; }
-import os, subprocess, sys
-app, secret = sys.argv[1:]
-env = os.environ.copy()
-env.update({
-    "DEPLOY_WEBHOOK_URL": "https://" + secret + "\uff20" + "example.com/hook",
-    "APP_NAME": "acme",
-    "BRANCH": "main",
-    "ENVIRONMENT": "production",
-    "APP_VERSION": "0.1.0+abc",
-})
-proc = subprocess.run(["sh", os.path.join(app, "scripts/notify.sh")], env=env, capture_output=True, text=True)
-if proc.returncode == 0 or secret in proc.stdout or secret in proc.stderr:
-    sys.exit(1)
-PY
-  rm -rf "$shim" "$log" "$log.out" "$log.err"
-}
-
-check_one() {
-  name=$1
-  script=$2
-  work=$(mktemp -d "${TMPDIR:-/tmp}/joules-web-app.XXXXXX")
-  copy_app "$work/app"
-  if [ "$name" = "template" ]; then
-    if sh "$check" "$work/app" >/dev/null && pipeline_ok "$work/app"; then
-      echo "ok   $name"
-    else
-      echo "fail $name" >&2
-      fail=$((fail + 1))
-    fi
-  else
-    sh "$script" "$work/app"
-    if sh "$check" "$work/app" >/dev/null; then
-      echo "fail $name (check passed on a broken copy)" >&2
-      fail=$((fail + 1))
-    else
-      echo "ok   $name breaks the check"
-    fi
-  fi
-  rm -rf "$work"
-}
-
-selected() {
-  name=$1
-  [ -z "$want" ] || [ "$want" = "$name" ]
-}
-
-if [ "$mode" = "check" ]; then
-  if selected template; then
-    ran=$((ran + 1))
-    check_one template ""
-  fi
-  if selected create; then
-    ran=$((ran + 1))
-    work=$(mktemp -d "${TMPDIR:-/tmp}/joules-web-app.XXXXXX")
-    bad=0
-    sh "$create" --dest "$work/app" --name acme-app --title "Acme App" >/dev/null || bad=1
-    sh "$check" "$work/app" >/dev/null || bad=1
-    pipeline_ok "$work/app" || bad=1
-    grep -q '"name": "acme-app"' "$work/app/package.json" || bad=1
-    grep -q '"name": "acme-app"' "$work/app/package-lock.json" || bad=1
-    grep -q '"database_name": "acme-app"' "$work/app/wrangler.jsonc" || bad=1
-    grep -q '"database_name": "acme-app-staging"' "$work/app/wrangler.jsonc" || bad=1
-    grep -q 'Acme App' "$work/app/src/routes/index.tsx" || bad=1
-    grep -q 'Acme App' "$work/app/public/manifest.webmanifest" || bad=1
-    grep -R -q -e '__APP_NAME__' -e '__APP_TITLE__' "$work/app" && bad=1
-    sh "$create" --dest "$work/app" --name acme-app --title "Acme App" >/dev/null 2>&1 && bad=1
-    sh "$create" --dest "$work/bad" --name 'Bad Name' --title "Nope" >/dev/null 2>&1 && bad=1
-    sh "$create" </dev/null >/dev/null 2>&1 && bad=1
-    if [ "$bad" = 0 ]; then
-      echo "ok   create"
-    else
-      echo "fail create" >&2
-      fail=$((fail + 1))
-    fi
-    rm -rf "$work"
-  fi
-  for script in "$mutations"/*.sh; do
-    [ -f "$script" ] || continue
-    name=$(basename "$script" .sh)
-    selected "$name" || continue
-    ran=$((ran + 1))
-    check_one "$name" "$script"
-  done
-  if [ "$ran" = 0 ]; then
-    echo "no mutation named $want" >&2
-    exit 1
-  fi
-  [ "$fail" = 0 ]
-  exit
+print_only=0
+if [ "${1:-}" = "--print" ]; then
+  print_only=1
 fi
 
-denies='Bash(grok plugin install*)
-Bash(grok plugin marketplace*)
-Bash(git push*)
-Bash(curl*)
-Bash(wget*)
-Bash(npx wrangler deploy*)
-Bash(wrangler deploy*)
-Bash(npm run deploy*)'
-
-for script in "$mutations"/*.sh; do
-  [ -f "$script" ] || continue
-  name=$(basename "$script" .sh)
-  selected "$name" || continue
-  ran=$((ran + 1))
-  echo "=== $plugin/$name ==="
-  if [ "$mode" = "print" ]; then
-    printf 'grok plugin install %s --trust\n' "$plugin_dir"
-    printf 'grok plugin enable %s\n' "$plugin"
-    printf 'grok --cwd <copy of template/, mutation %s> --prompt-file %s --verbatim --always-approve --output-format json --max-turns 16 --no-subagents --disable-web-search' \
-      "$name" "$prompt"
-    printf '%s\n' "$denies" | while IFS= read -r deny; do
-      printf " --deny '%s'" "$deny"
-    done
-    printf '\n'
-    continue
-  fi
-
-  grok plugin install "$plugin_dir" --trust >/dev/null 2>&1 || {
-    echo "FAIL $plugin/$name (plugin install)"
-    fail=$((fail + 1))
-    continue
-  }
-  grok plugin enable "$plugin" >/dev/null 2>&1 || {
-    echo "FAIL $plugin/$name (plugin enable)"
-    fail=$((fail + 1))
-    continue
-  }
-
-  work=$(mktemp -d "${TMPDIR:-/tmp}/joules-web-app.XXXXXX")
-  log="$here/logs/$name"
-  rm -rf "$log"
-  mkdir -p "$log"
-  copy_app "$work/app"
-  sh "$script" "$work/app"
-  if sh "$check" "$work/app" >/dev/null; then
-    echo "FAIL $plugin/$name (mutation did not break the check)"
-    fail=$((fail + 1))
-    rm -rf "$work"
-    continue
-  fi
-
-  set -- \
-    --cwd "$work/app" \
-    --prompt-file "$prompt" \
-    --verbatim \
-    --always-approve \
-    --output-format json \
-    --max-turns 16 \
-    --no-subagents \
-    --disable-web-search
-  while IFS= read -r deny; do
-    [ -n "$deny" ] || continue
-    set -- "$@" --deny "$deny"
-  done <<'EOF'
-Bash(grok plugin install*)
-Bash(grok plugin marketplace*)
-Bash(git push*)
-Bash(curl*)
-Bash(wget*)
-Bash(npx wrangler deploy*)
-Bash(wrangler deploy*)
-Bash(npm run deploy*)
-EOF
-  if ! grok "$@" >"$log/grok-out.json" 2>"$log/grok-err.txt"
-  then
-    echo "FAIL $plugin/$name (grok exit)"
-    tail -n 20 "$log/grok-err.txt" >&2
-    echo "kept $work/app"
-    echo "log $log"
-    fail=$((fail + 1))
-    continue
-  fi
-
-  if sh "$check" "$work/app"; then
-    echo "ok   $name"
-    rm -rf "$work"
-  else
-    echo "FAIL $plugin/$name (still failing the check)"
-    echo "kept $work/app"
-    echo "log $log"
-    fail=$((fail + 1))
-  fi
-done
-
-if [ "$ran" = 0 ]; then
-  echo "no mutation named ${want:-"(none)"}" >&2
+prompt_text=$(python3 -c 'import pathlib,sys; print(pathlib.Path(sys.argv[1]).read_text().strip())' "$case_file")
+if [ "$prompt_text" != "create a web app" ]; then
+  echo "prompt text is not exactly: create a web app" >&2
   exit 1
 fi
-[ "$fail" = 0 ]
+
+if [ "$print_only" = 1 ]; then
+  printf 'grok plugin install %s --trust\n' "$plugin_dir"
+  printf 'grok plugin enable %s\n' "$plugin"
+  printf 'grok --cwd <sandbox> --prompt-file %s --verbatim --always-approve --output-format json --max-turns 16 --no-subagents --disable-web-search --disallowed-tools ask_user_question' \
+    "$case_file"
+  printf " --deny '%s'" \
+    'Bash(grok plugin install*)' \
+    'Bash(grok plugin marketplace*)' \
+    'Bash(git push*)' \
+    'Bash(curl*)' \
+    'Bash(wget*)' \
+    'Bash(npx wrangler deploy*)' \
+    'Bash(wrangler deploy*)' \
+    'Bash(npm run deploy*)'
+  printf '\n'
+  printf 'grok --cwd <sandbox> --resume <same session> -p <oracle answers> [same flags]\n'
+  exit 0
+fi
+
+fail() {
+  printf 'fail %s\n' "$1" >&2
+  exit 1
+}
+
+python3 - "$plugin_dir" <<'PY' || fail "plugin shape"
+import pathlib, sys
+root = pathlib.Path(sys.argv[1])
+repo = root.parents[1]
+skill = (root / "skills/web-app/SKILL.md").read_text()
+lower = skill.lower()
+if "grok.com" in lower or "grok bot" in lower:
+    sys.exit("skill names a host")
+if (root / ".mcp.json").exists():
+    sys.exit("plugin mcp config")
+if (root / "hooks").exists() or (root / "agents").exists():
+    sys.exit("extra plugin component")
+commands = list((root / "commands").glob("*.md"))
+if [p.name for p in commands] != ["create.md"]:
+    sys.exit("command set changed")
+plugins = (repo / "plugins/joules-plugins/hooks/plugins.txt").read_text()
+for banned in ("web-app", "stripe"):
+    if banned in plugins.split():
+        sys.exit("hooks/plugins.txt lists " + banned)
+PY
+
+installed_before=0
+if grok plugin list --json | python3 -c 'import json,sys; sys.exit(0 if any(p.get("name")=="web-app" for p in json.load(sys.stdin)) else 1)'
+then
+  installed_before=1
+fi
+saved=$(mktemp)
+cp "$config" "$saved"
+restored=0
+restore_plugins() {
+  [ "$restored" = 1 ] && return
+  restored=1
+  if [ "$installed_before" = 0 ]; then
+    grok plugin uninstall web-app --confirm >/dev/null 2>&1 || true
+  fi
+  python3 - "$config" "$saved" <<'PY'
+import pathlib, re, sys
+live, saved = sys.argv[1:]
+def enabled(text):
+    match = re.search(r"(?ms)^\[plugins\]\nenabled = \[.*?\n\]\n", text)
+    if not match:
+        sys.stderr.write("plugins.enabled missing\n")
+        sys.exit(1)
+    return match.group(0)
+old = enabled(pathlib.Path(saved).read_text())
+path = pathlib.Path(live)
+text = path.read_text()
+new = enabled(text)
+if old != new:
+    path.write_text(text.replace(new, old, 1))
+PY
+  rm -f "$saved"
+}
+trap restore_plugins EXIT
+
+grok plugin install "$plugin_dir" --trust >/dev/null || fail "plugin install"
+grok plugin enable "$plugin" >/dev/null || fail "plugin enable"
+
+work=$(mktemp -d "${TMPDIR:-/tmp}/joules-web-app.XXXXXX")
+log="$here/logs/create-web-app"
+rm -rf "$log"
+mkdir -p "$log"
+git -C "$work" init -q
+git -C "$work" -c user.name=joules -c user.email=joules@example.com commit -q --allow-empty -m init
+dest="$work/$name"
+
+run_grok() {
+  python3 -c 'import os, signal, subprocess, sys
+cmd = sys.argv[1:]
+proc = subprocess.Popen(cmd, start_new_session=True)
+try:
+    code = proc.wait(timeout=900)
+except subprocess.TimeoutExpired:
+    os.killpg(proc.pid, signal.SIGTERM)
+    try:
+        proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        os.killpg(proc.pid, signal.SIGKILL)
+        proc.wait(timeout=5)
+    sys.stderr.write("grok timed out\n")
+    raise SystemExit(124)
+raise SystemExit(code)
+' "$@"
+}
+
+denies() {
+  set -- "$@" \
+    --disallowed-tools ask_user_question \
+    --deny 'Bash(grok plugin install*)' \
+    --deny 'Bash(grok plugin marketplace*)' \
+    --deny 'Bash(git push*)' \
+    --deny 'Bash(curl*)' \
+    --deny 'Bash(wget*)' \
+    --deny 'Bash(npx wrangler deploy*)' \
+    --deny 'Bash(wrangler deploy*)' \
+    --deny 'Bash(npm run deploy*)'
+  run_grok "$@"
+}
+
+echo "=== $plugin/create-web-app ==="
+if ! denies grok \
+  --cwd "$work" \
+  --prompt-file "$case_file" \
+  --verbatim \
+  --always-approve \
+  --output-format json \
+  --max-turns 16 \
+  --no-subagents \
+  --disable-web-search \
+  >"$log/ask.json" 2>"$log/ask.err"
+then
+  tail -n 30 "$log/ask.err" >&2
+  echo "kept $work" >&2
+  fail "ask grok exit"
+fi
+
+session=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("sessionId") or "")' "$log/ask.json")
+[ -n "$session" ] || fail "ask session"
+
+transcript_of() {
+  python3 - "$1" "$2" <<'PY'
+import glob, json, os, sys
+session, dest = sys.argv[1:]
+matches = glob.glob(os.path.expanduser("~/.grok/sessions/*/%s/chat_history.jsonl" % session))
+if not matches:
+    sys.stderr.write("no transcript\n")
+    sys.exit(1)
+chat = max(matches, key=os.path.getmtime)
+
+def text_of(content):
+    if isinstance(content, str):
+        return content
+    parts = []
+    for block in content or []:
+        if isinstance(block, dict) and block.get("type") == "text":
+            parts.append(block.get("text") or "")
+        elif isinstance(block, str):
+            parts.append(block)
+    return "\n".join(parts)
+
+chunks = []
+for line in open(chat):
+    event = json.loads(line)
+    kind = event.get("type")
+    if kind == "assistant":
+        body = text_of(event.get("content")).strip()
+        if body:
+            chunks.append(body)
+        for call in event.get("tool_calls") or []:
+            args = call.get("arguments")
+            if not isinstance(args, str):
+                args = json.dumps(args)
+            chunks.append(args or "")
+    elif kind == "tool_result":
+        chunks.append(text_of(event.get("content")))
+open(dest, "w").write("\n".join(chunks))
+PY
+}
+
+transcript_of "$session" "$log/ask.txt" || fail "ask transcript"
+python3 - "$session" <<'PY' || fail "questions"
+import glob, json, os, sys
+session = sys.argv[1]
+matches = glob.glob(os.path.expanduser("~/.grok/sessions/*/%s/chat_history.jsonl" % session))
+if not matches:
+    sys.stderr.write("no transcript\n")
+    sys.exit(1)
+chat = max(matches, key=os.path.getmtime)
+asked = []
+early = False
+for line in open(chat):
+    event = json.loads(line)
+    if event.get("type") != "assistant":
+        continue
+    content = event.get("content")
+    if isinstance(content, str):
+        asked.append(content)
+    for call in event.get("tool_calls") or []:
+        args = call.get("arguments")
+        if not isinstance(args, str):
+            args = json.dumps(args)
+        if args and "create.sh" in args and "--dest" in args:
+            early = True
+text = "\n".join(asked).lower()
+missing = [label for label in ("destination", "package name", "title") if label not in text]
+if missing:
+    sys.stderr.write("missing questions: %s\n" % ", ".join(missing))
+    sys.exit(1)
+if early:
+    sys.stderr.write("create.sh ran before the oracle answered\n")
+    sys.exit(1)
+PY
+
+if [ -n "$(find "$work" -mindepth 1 \( -name .git -o -name .grok \) -prune -o -print)" ]; then
+  find "$work" -mindepth 1 \( -name .git -o -name .grok \) -prune -o -print >&2
+  fail "wrote the app before the questions were answered"
+fi
+
+oracle="$log/oracle.txt"
+printf 'destination: %s\npackage name: %s\ntitle: %s\n' "$dest" "$name" "$title" > "$oracle"
+
+if ! denies grok \
+  --cwd "$work" \
+  --resume "$session" \
+  -p "$(cat "$oracle")" \
+  --verbatim \
+  --always-approve \
+  --output-format json \
+  --max-turns 16 \
+  --no-subagents \
+  --disable-web-search \
+  >"$log/create.json" 2>"$log/create.err"
+then
+  tail -n 30 "$log/create.err" >&2
+  echo "kept $work" >&2
+  fail "create grok exit"
+fi
+
+transcript_of "$session" "$log/create.txt" || fail "create transcript"
+python3 - "$log/create.txt" "$dest" "$name" "$title" <<'PY' || fail "create.sh"
+import pathlib, sys
+text, dest, name, title = sys.argv[1:]
+body = pathlib.Path(text).read_text()
+for needle in ("scripts/create.sh", "--dest", "--name", "--title", dest, name, title):
+    if needle not in body:
+        sys.stderr.write("missing %s\n" % needle)
+        sys.exit(1)
+PY
+
+check_app() {
+  app=$1
+  [ -d "$app" ] || fail "missing app"
+  python3 - "$app" "$name" "$title" <<'PY'
+import pathlib, sys
+app = pathlib.Path(sys.argv[1])
+name, title = sys.argv[2:]
+errors = []
+need = [
+    "package.json", "vite.config.ts", "wrangler.jsonc", "tsconfig.json",
+    "src/server.ts", "src/server/mcp.ts", "src/router.tsx",
+    "src/routes/__root.tsx", "src/routes/index.tsx",
+    "src/server/auth/policy.ts", "src/server/db/schema.ts", "src/server/db/client.ts",
+    "src/server/functions/health.ts", "drizzle.config.ts", "drizzle/0000_sessions.sql",
+    "public/sw.js", "public/offline.html", "public/manifest.webmanifest",
+    "deploy/branches.json", ".github/workflows/release.yml",
+    "scripts/verify.sh", "scripts/screenshot.sh", "scripts/version.sh",
+    "scripts/release.sh", "scripts/notify.sh", "scripts/branch-env.sh",
+    "README.md", "tests/ready.test.ts",
+]
+for rel in need:
+    if not (app / rel).exists():
+        errors.append("missing " + rel)
+
+def text(rel):
+    return (app / rel).read_text()
+
+def require(rel, needle):
+    if needle not in text(rel):
+        errors.append("%s missing %s" % (rel, needle))
+
+def reject(rel, needle):
+    if needle in text(rel):
+        errors.append("%s has %s" % (rel, needle))
+
+require("package.json", '"name": "%s"' % name)
+for needle in ("@tanstack/solid-start", '"solid-js"', "drizzle-orm", '"agents"', "@modelcontextprotocol/server"):
+    require("package.json", needle)
+reject("package.json", "stripe")
+reject("package.json", '"react"')
+require("vite.config.ts", "solid-start")
+reject("vite.config.ts", "react-start")
+require("wrangler.jsonc", '"main": "src/server.ts"')
+require("wrangler.jsonc", "nodejs_compat")
+require("wrangler.jsonc", "d1_databases")
+require("wrangler.jsonc", "observability")
+require("wrangler.jsonc", '"database_name": "%s"' % name)
+require("wrangler.jsonc", '"database_name": "%s-staging"' % name)
+require("wrangler.jsonc", '"production"')
+require("wrangler.jsonc", '"staging"')
+reject("wrangler.jsonc", "durable_objects")
+reject("wrangler.jsonc", '"ai"')
+require("src/server.ts", "solid-start/server-entry")
+require("src/server.ts", "/mcp")
+reject("src/server.ts", "react-start")
+reject("src/server.ts", "stdio")
+mcp = text("src/server/mcp.ts")
+if mcp.count("registerTool") != 1:
+    errors.append("healthcheck tool count is %s" % mcp.count("registerTool"))
+for needle in ("createMcpHandler", "healthcheck", "ok: true", "agents/mcp/server"):
+    if needle not in mcp:
+        errors.append("mcp missing %s" % needle)
+for needle in ("cloudflare:workers", "env.DB", "SESSION", "secret", "process.env", "stdio", "registerPrompt", "registerResource"):
+    if needle in mcp:
+        errors.append("mcp reads %s" % needle)
+require("src/server/auth/policy.ts", "passkey")
+require("src/server/auth/policy.ts", "phone-otp")
+require("src/routes/index.tsx", "serviceWorker.register")
+require("src/routes/index.tsx", title)
+require("public/manifest.webmanifest", title)
+require("deploy/branches.json", '"main": "production"')
+require("deploy/branches.json", '"staging": "staging"')
+require(".github/workflows/release.yml", "environment: release")
+require(".github/workflows/release.yml", "scripts/release.sh")
+for secret in ("CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID", "DEPLOY_WEBHOOK_URL"):
+    require(".github/workflows/release.yml", secret)
+readme = text("README.md")
+for needle in (
+    "GitHub Environment", "release", "main", "staging", "database_id",
+    "CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID", "DEPLOY_WEBHOOK_URL",
+    "/mcp", "healthcheck",
+):
+    if needle not in readme:
+        errors.append("README missing %s" % needle)
+blob_parts = []
+for path in app.rglob("*"):
+    if path.is_file():
+        blob_parts.append(path.read_text(errors="ignore"))
+    elif path.is_dir() and not any(path.iterdir()):
+        errors.append("empty directory %s" % path.relative_to(app))
+blob = "\n".join(blob_parts)
+for needle in ("__APP_NAME__", "__APP_TITLE__", "stripe", "Stripe"):
+    if needle in blob:
+        errors.append("tree contains %s" % needle)
+if errors:
+    sys.stderr.write("\n".join(errors) + "\n")
+    sys.exit(1)
+PY
+}
+
+check_app "$dest" || {
+  echo "kept $work" >&2
+  fail "created app"
+}
+
+expected=$(mktemp -d "${TMPDIR:-/tmp}/joules-web-app-expected.XXXXXX")
+sh "$create" --dest "$expected/app" --name "$name" --title "$title" >/dev/null || fail "local create"
+if ! diff -r "$expected/app" "$dest" >"$log/diff.txt"; then
+  echo "created tree is not the create.sh copy" >&2
+  echo "kept $work" >&2
+  fail "create.sh copy"
+fi
+rm -rf "$expected" "$work"
+echo "PASS $plugin/create-web-app"

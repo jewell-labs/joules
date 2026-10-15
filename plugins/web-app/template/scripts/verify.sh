@@ -21,11 +21,16 @@ do
   [ -f "$file" ] || { echo "missing $file" >&2; exit 1; }
 done
 
-grep -q 'solid-start/server-entry' wrangler.jsonc || {
+# Custom entry delegates to the Solid Start server. The package path stays the app.
+if grep -q 'solid-start/server-entry' wrangler.jsonc; then
+  :
+elif grep -q 'solid-start/server-entry' src/server.ts && grep -q '"main": "src/server.ts"' wrangler.jsonc; then
+  :
+else
   echo "server entry is not the Solid one" >&2
   exit 1
-}
-if grep -q 'react-start' wrangler.jsonc; then
+fi
+if grep -q 'react-start' wrangler.jsonc || grep -q 'react-start' src/server.ts; then
   echo "server entry is the React one" >&2
   exit 1
 fi
