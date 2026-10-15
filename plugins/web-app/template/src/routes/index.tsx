@@ -12,7 +12,7 @@ function Home() {
   })
   return (
     <main>
-      <h1>__APP_TITLE__</h1>
+      <h1>{'__APP_TITLE__'}</h1>
       <p>Server {ready(Boolean(status()?.ok))}.</p>
     </main>
   )

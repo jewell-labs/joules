@@ -51,13 +51,11 @@ trap cleanup EXIT INT TERM
 ready=0
 i=0
 while [ "$i" -lt 90 ]; do
-  if python3 -c 'import sys, urllib.error, urllib.request
-try:
-    urllib.request.urlopen(sys.argv[1], timeout=2)
-except urllib.error.HTTPError:
-    sys.exit(0)
-except Exception:
-    sys.exit(1)' "$base/" >/dev/null 2>&1; then
+  # A 4xx or 5xx is not a page worth capturing. urlopen raises on those.
+  if python3 -c 'import sys, urllib.request
+for url in sys.argv[1:]:
+    urllib.request.urlopen(url, timeout=2)
+' "$base/" "$base/offline" >/dev/null 2>&1; then
     ready=1
     break
   fi
