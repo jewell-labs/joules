@@ -116,16 +116,52 @@ def job_of(needle):
         sys.exit(1)
     return jobs[owners[0]]
 
+def steps_of(body):
+    steps = []
+    current = []
+    for line in body.splitlines():
+        if line.startswith("      - "):
+            if current:
+                steps.append("\n".join(current))
+            current = [line]
+        elif current and (line.startswith("        ") or line.strip() == ""):
+            current.append(line)
+        else:
+            if current:
+                steps.append("\n".join(current))
+            current = []
+    if current:
+        steps.append("\n".join(current))
+    return steps
+
+def step_with(body, needle):
+    matches = [step for step in steps_of(body) if needle in step]
+    if len(matches) != 1:
+        sys.exit(1)
+    return matches[0]
+
+if "notify" in jobs:
+    sys.exit(1)
 check = job_of("scripts/release.sh check")
 deploy = job_of("scripts/release.sh deploy")
-notify = job_of("scripts/release.sh notify")
-if "CLOUDFLARE_API_TOKEN" in check or "DEPLOY_WEBHOOK_URL" in check:
+if "scripts/release.sh notify" not in deploy:
     sys.exit(1)
+for secret in ("CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID", "DEPLOY_WEBHOOK_URL"):
+    if secret in check:
+        sys.exit(1)
 if "environment:" in check:
     sys.exit(1)
-if "DEPLOY_WEBHOOK_URL" in deploy or "environment: release" not in deploy:
+if "environment: release" not in deploy:
     sys.exit(1)
-if "CLOUDFLARE_API_TOKEN" in notify or "environment: release" not in notify:
+if "worker-dist" not in text or ".wrangler/deploy/config.json" not in text:
+    sys.exit(1)
+if "npm run build" in deploy or "release.sh check" in deploy:
+    sys.exit(1)
+deploy_step = step_with(deploy, "scripts/release.sh deploy")
+notify_step = step_with(deploy, "scripts/release.sh notify")
+if "DEPLOY_WEBHOOK_URL" in deploy_step:
+    sys.exit(1)
+if "CLOUDFLARE_API_TOKEN" in notify_step or "CLOUDFLARE_ACCOUNT_ID" in notify_step:
     sys.exit(1)
 PY
   : > "$log"
@@ -155,6 +191,25 @@ PY
   rm -f "$app/.dev.vars" "$app/.env"
   printf '%s\n' "$built" | grep -q '^ok$' || { rm -rf "$shim" "$log"; return 1; }
   [ ! -e "$app/.dev.vars" ] && [ ! -e "$app/.env" ] || { rm -rf "$shim" "$log"; return 1; }
+  git -C "$app" init -q
+  printf '%s\n' 'sk_live_localonly' > "$app/.dev.vars"
+  built=$(sh "$app/scripts/verify.sh" --built) || {
+    rm -f "$app/.dev.vars"
+    rm -rf "$app/.git" "$shim" "$log"
+    return 1
+  }
+  rm -f "$app/.dev.vars"
+  printf '%s\n' "$built" | grep -q '^ok$' || { rm -rf "$app/.git" "$shim" "$log"; return 1; }
+  printf '%s\n' 'sk_live_onlyhere' > "$app/.env"
+  git -C "$app" add -f -- .env
+  verify_status=0
+  verify_out=$(sh "$app/scripts/verify.sh" --built 2>&1) || verify_status=$?
+  git -C "$app" rm -q -f --cached -- .env >/dev/null 2>&1 || true
+  rm -f "$app/.env"
+  rm -rf "$app/.git"
+  [ "$verify_status" != 0 ] || { rm -rf "$shim" "$log"; return 1; }
+  printf '%s\n' "$verify_out" | grep -q 'a secret is in the tree' || { rm -rf "$shim" "$log"; return 1; }
+  [ ! -e "$app/.env" ] && [ ! -d "$app/.git" ] || { rm -rf "$shim" "$log"; return 1; }
   cp "$app/.dev.vars.example" "$log.example"
   printf '\n%s\n' 'sk_live_example' >> "$app/.dev.vars.example"
   verify_status=0

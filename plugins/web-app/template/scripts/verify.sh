@@ -37,15 +37,41 @@ pat=$(printf '%s%s|%s%s|%s%s|%s|%s %s' \
   'rk_' 'live_' \
   'AKIA[0-9A-Z]{16}' \
   'BEGIN' 'PRIVATE KEY')
-# .env and .dev.vars are gitignored credentials. .dev.vars.example is tracked, so it stays in the scan.
-hits=$(find . \
-  \( -name node_modules -o -name dist -o -name .wrangler -o -name .output -o -name .git -o -name screenshots \
-    -o -name .env -o -name '.env.*' -o -name .dev.vars \
-    -o \( -name '.dev.vars.*' ! -name .dev.vars.example \) \
-  \) -prune \
-  -o -type f -exec grep -I -l -E "$pat" {} + 2>/dev/null || true)
-if [ -n "$hits" ]; then
+# Skip a credential file only when it is not part of the tree Git would commit.
+# check-ignore exits 0 for an ignored untracked path and does not match a tracked path.
+# create.sh does not run git init, so outside a repo those untracked files are still local.
+ignored_credential() {
+  base=${1##*/}
+  case "$base" in
+    .dev.vars.example) return 1 ;;
+    .env|.env.*|.dev.vars|.dev.vars.*) ;;
+    *) return 1 ;;
+  esac
+  if git -C "$root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    if git -C "$root" check-ignore -q -- "$1"; then
+      return 0
+    fi
+    return 1
+  fi
+  return 0
+}
+mark=$(mktemp "${TMPDIR:-/tmp}/joules-verify.XXXXXX")
+find . \
+  \( -name node_modules -o -name dist -o -name .wrangler -o -name .output -o -name .git -o -name screenshots \) -prune \
+  -o -type f -print |
+while IFS= read -r file; do
+  if ignored_credential "$file"; then
+    continue
+  fi
+  if grep -I -q -E "$pat" "$file" 2>/dev/null; then
+    echo 1 > "$mark"
+    break
+  fi
+done
+if [ -s "$mark" ]; then
+  rm -f "$mark"
   echo "a secret is in the tree" >&2
   exit 1
 fi
+rm -f "$mark"
 echo ok
