@@ -209,8 +209,45 @@ class LocalSuiteTest(unittest.TestCase):
                 ]
             )
             self.assertIn("Weights directory: \n", guessed)
-            self.assertNotIn("Weights directory: %s" % (Path.home() / "gguf"), guessed)
+            weights_line = next(
+                line for line in guessed.splitlines() if line.startswith("Weights directory:")
+            )
+            self.assertEqual(weights_line, "Weights directory: ")
             self.assertEqual(self.mod.hosted_default(config.read_text()), "kept-hosted")
+
+    def test_all_interfaces_is_outside_the_suite(self):
+        self.assertFalse(self.mod.is_loopback("0.0.0.0"))
+        self.assertFalse(self.mod.is_loopback("10.0.0.8"))
+        self.assertTrue(self.mod.is_loopback("127.0.0.1"))
+        self.assertTrue(self.mod.is_loopback("localhost"))
+        self.assertTrue(self.mod.is_loopback("[::1]"))
+        self.assertEqual(self.mod.listen_host("0.0.0.0"), "127.0.0.1")
+        self.assertEqual(self.mod.listen_host("localhost"), "localhost")
+        wide = (
+            "[%s.wide]\n%s = \"wide\"\n%s = \"http://0.0.0.0:9%s\"\n"
+            % (
+                self.contract["prefix"],
+                self.contract["id_key"],
+                self.contract["endpoint_key"],
+                self.contract["endpoint_path"],
+            )
+        )
+        self.assertEqual(
+            self.mod.loopback_from_config(
+                wide,
+                self.contract["context_key"],
+                self.contract["prefix"],
+                self.contract["id_key"],
+            ),
+            [],
+        )
+        with self.assertRaises(SystemExit):
+            self.mod.apply_config(
+                "",
+                self.contract,
+                {"alias": "wide", "host": "0.0.0.0", "port": 9},
+                128,
+            )
 
     def test_setup_downloads_configures_and_reuses(self):
         payload = b"GGUF" + os.urandom(2048)

@@ -10,12 +10,20 @@ import re
 from urllib.parse import urlparse
 
 
-LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1", "0.0.0.0"}
+LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
 CHAPTER_ANCHOR = "### Local OpenAI-Compatible Server"
 
 
 def is_loopback(host):
+    """True only for a loopback name. An all-interfaces bind is not loopback."""
     return (host or "").strip("[]") in LOOPBACK_HOSTS
+
+
+def endpoint_host(host):
+    host = (host or "").strip("[]")
+    if ":" in host:
+        return "[%s]" % host
+    return host
 
 
 def fence_after(text, heading):
@@ -295,10 +303,12 @@ def apply_config(text, contract, server, context):
     for forbidden in contract["forbidden"]:
         if forbidden in (contract["id_key"], contract["endpoint_key"], contract["context_key"]):
             raise SystemExit("chapter field collides with the catalog endpoint")
+    if not is_loopback(server.get("host")):
+        raise SystemExit("refusing a server that is not on loopback")
     alias = server["alias"]
     header = section_header(contract["prefix"], alias)
     path = contract["endpoint_path"]
-    endpoint = "http://%s:%s%s" % (server["host"], server["port"], path)
+    endpoint = "http://%s:%s%s" % (endpoint_host(server["host"]), server["port"], path)
     fields = [
         (contract["id_key"], alias),
         (contract["endpoint_key"], endpoint),

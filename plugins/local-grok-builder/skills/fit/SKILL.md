@@ -12,7 +12,7 @@ description: >
 
 ## When
 
-Use this when the user wants local GGUF weights, a Grok model entry for a machine on the desk, a smaller or newer suite, or a doctor pass. The weights directory is an input. When they name a folder, that folder is the directory. Otherwise it is the directory recorded for this suite, or the directory of a model a server on this machine already loaded. Do not guess a folder in the home directory. A host file that lists byte sizes is the set of files someone already chose. It is not the proof those files are still the best fit.
+Use this when the user wants local GGUF weights, a Grok model entry for a machine on the desk, a smaller or newer suite, or a doctor pass. This suite is GGUF chat files served by llama-server. Another format, and a server that does not speak that chat API, stay outside it. A server that is not on loopback stays outside it too: discover does not list it, and setup does not start or wire it. The weights directory is an input. When they name a folder, that folder is the directory. Otherwise it is the directory recorded for this suite, or the directory of a model a server on this machine already loaded. Do not guess a folder in the home directory. A host file that lists byte sizes is the set of files someone already chose. It is not the proof those files are still the best fit.
 
 ## Inputs
 
