@@ -1,9 +1,9 @@
 ---
 name: score-plugin
 description: >
-  Score a Grok plugin from 0 to 100 against the current docs at docs.x.ai.
-  Use when the user wants a score, a quality review, or a best-practices
-  check of a plugin.
+  Score a Grok plugin from 0 to 100 against the current docs at docs.x.ai
+  and the xAI marketplace contributing guide. Use when the user wants a
+  score, a quality review, or a best-practices check of a plugin.
 when-to-use: >
   score a plugin, rate a plugin, review plugin quality,
   best practices for a Grok plugin
@@ -15,19 +15,17 @@ metadata:
 
 # Score a plugin
 
-Score one plugin from 0 to 100. Read the current docs in this session and score against those pages. Leave the files unchanged unless the user asked you to fix them.
+Score one plugin from 0 to 100. Follow the Build a plugin section of Joules `AGENTS.md`. In this repository it is at the repo root. Otherwise read `https://raw.githubusercontent.com/jewell-labs/joules/main/AGENTS.md`.
 
-## Contract
+When that file does not load, open https://docs.x.ai/llms.txt, the skills and plugins chapters shipped with `grok`, https://github.com/xai-org/plugin-marketplace/blob/main/CONTRIBUTING.md, and https://docs.x.ai/grok-bot/skills-routines-and-automations. Use the docs MCP when it is connected. When this plugin's `.mcp.json` URL differs from the MCP endpoint on that index, update the file and follow the current MCP page.
 
-Follow the Official marketplace and Future-proof sections of Joules `AGENTS.md`. In this repository it is at the repo root. Otherwise read `https://raw.githubusercontent.com/jewell-labs/joules/main/AGENTS.md`.
-
-When that file does not load, fetch https://docs.x.ai/llms.txt, open the pages for the components in the plugin, and use the docs MCP when it is connected. When this plugin's `.mcp.json` URL differs from the MCP endpoint on that index, update the file and follow the current MCP page. Also search https://github.com/xai-org/plugin-marketplace `.grok-plugin/marketplace.json` before scoring One job.
+Leave the files unchanged unless the user asked you to fix them.
 
 ## Steps
 
 1. Use the path the user gave. Otherwise use the nearest directory that contains a plugin manifest or `skills/`.
-2. Open the current pages for the components that plugin contains, including the skills page and the Grok Bot skills page.
-3. When `grok` is on `PATH`, run `grok plugin validate` on the directory and keep the output. When it is not, the Current row below uses the docs comparison and you say the CLI was absent.
+2. Open the pages Build a plugin names, including the contributing page, before you score Conventions or Safety.
+3. When `grok` is on `PATH`, run `grok plugin validate` on the directory and keep the output. When the plugin is installed, read `grok inspect` for its components. When `grok` is absent, say so and score Load from the docs comparison.
 
 ## Rubric
 
@@ -35,11 +33,12 @@ Score only from evidence in the files and in the pages you opened. Quote the fil
 
 | Part | Points | Full points |
 | --- | ---: | --- |
-| Current | 25 | Validate passed, or the CLI was absent and the files match the pages you opened. A skipped validate run when `grok` is installed scores 0. |
-| Future-proof | 25 | Contracts that can change are links to the pages you opened, or reads through the docs MCP. A remote MCP URL is public HTTPS. The procedure still makes sense on grok.com and in a Grok Bot. |
-| One job | 15 | The description, the skills, and the other files all serve one job. Full points also need the Official marketplace result: exclusive, on top of a named official plugin, or still useful without that plugin. A plugin that repeats an official entry scores 0. |
-| Procedure | 20 | Each skill states when to use it, the inputs, the steps, how to check the result, what to return, and what a person must approve. Score this row against the skills pages you opened, including the Grok Bot page. |
-| Safety | 15 | No secrets. Publishing, deleting, sending, and spending are gated on a person asking for that action. |
+| Load | 20 | `grok plugin validate` passed. When the plugin is installed, `grok inspect` shows its components. A skipped validate run when `grok` is installed scores 0. |
+| Future-proof | 20 | Contracts that can change are links to the pages you opened. Frontmatter the current page says is ignored is unset. A remote MCP URL is public HTTPS. |
+| Exclusive | 15 | The official catalog result is exclusive, on top of a named plugin, or still useful without that plugin. A plugin that repeats an official entry scores 0. |
+| Procedure | 20 | One workflow. The description says what it does, when it runs, and the slash name. The body states when, inputs, steps, how to check, what to return, and what a person must approve. The behavior test is named. |
+| Conventions | 15 | The contributing conventions section you opened this session: name, homepage, README, manifest, license, brand-scoped keywords, and an index that matches the files. |
+| Safety | 10 | The contributing security section you opened this session. Publishing, deleting, sending, and spending wait for the user. |
 
 The Future-proof row scores 0 when the plugin states a field list, model id, tool-name list, or event list as the contract.
 

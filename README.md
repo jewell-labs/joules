@@ -23,7 +23,7 @@ grok plugin install score-plugin --trust
 
 ## Add a plugin
 
-In a Grok Build session with these plugins installed, ask to create the plugin or run `/create-plugin`. Then `/validate-plugin` and `/score-plugin`.
+Search the official catalog first. Then `/create-plugin`, `/validate-plugin`, and `/score-plugin`. `grok plugin validate plugins/<name>` is the manifest check. After you ask to install, `grok inspect` and `/<skill>` on a safe input are the behavior check.
 
 From this checkout, follow `AGENTS.md`.
 

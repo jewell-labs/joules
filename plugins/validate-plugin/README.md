@@ -6,4 +6,4 @@ Checks a Grok plugin against the current docs and `grok plugin validate`. It rep
 grok plugin install validate-plugin --trust
 ```
 
-Then run `/validate-plugin` with a plugin path. The plugin connects the docs MCP at the endpoint listed in <https://docs.x.ai/llms.txt>.
+Then run `/validate-plugin` with a plugin path. License is MIT, the same terms as the repository `LICENSE`. The only network call is the docs MCP at the endpoint listed in <https://docs.x.ai/llms.txt>. That server takes no credential.

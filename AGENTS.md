@@ -54,13 +54,29 @@ Before you create, edit, validate, or score a plugin:
 
 A plugin stays valid when those pages change because the next session reads the pages again.
 
+## Build a plugin
+
+This is the procedure for `create-plugin`, `validate-plugin`, and `score-plugin`. Follow Official marketplace, Future-proof, and Catalog. Do not copy those sections into a skill.
+
+1. Official marketplace first. Stop when an official plugin does the job. When the user wants a skill under `.grok/skills/` and not a marketplace plugin, use the session's `create-skill` and stop.
+2. Open these for every component you add. Request markdown from docs pages.
+   - https://docs.x.ai/llms.txt and the skills, plugins, and marketplace pages it lists
+   - The skills and plugins chapters of the user guide shipped with `grok`, when the CLI is installed
+   - https://github.com/xai-org/plugin-marketplace/blob/main/CONTRIBUTING.md
+   - https://docs.x.ai/grok-bot/skills-routines-and-automations
+   Apply Future-proof when the public page and the CLI disagree.
+3. Write each skill as one workflow. The description says what it does, when it runs, and the slash name. The body states when to use it, the inputs, the steps, how to check the result, what to return, and what a person must approve. Name the tools the steps use. A command in the body is an instruction for the agent to run. Link a living docs page for any contract that can change. Put long reference material in a sibling file.
+4. Package the plugin by the Catalog section.
+5. Run `grok plugin validate plugins/<name>`. After the user asks to install, run `grok plugin install <name> --trust`, then `grok inspect` and confirm the skill source is `plugin: <name>`. Run `grok mcp doctor` when the plugin has an MCP server. Invoke `/<skill>` on a safe input. Run `grok plugin tag` only when the user asks to publish.
+6. Re-read the security section of the contributing page and reject the classes it rejects.
+
 ## Hosts
 
 Grok Build installs plugins from this marketplace. The commands are in the README.
 
 Write the skill body so the other hosts can follow it without a fork:
 
-- When to use it, inputs, steps, how to check the result, what to return, and what a person must approve.
+- The skill body follows Build a plugin.
 - Grok Build wiring follows the Build pages you opened this session.
 - grok.com reaches MCP over public HTTPS. Follow the current connectors page. A stdio server does not satisfy that host.
 - A Grok Bot follows the same procedure and connects MCP the way the current Bot and connector pages describe. Add a routine only after the skill is reliable.
@@ -74,7 +90,8 @@ If the current page for a host does not yet say how this marketplace installs th
 - List it in `.grok-plugin/marketplace.json`. Match the fields already in that file.
 - When `.grok-plugin/plugin-index.json` exists, list the components you actually added.
 - A plugin that lives in this repo uses a local source path.
-- Keywords include the plugin name.
+- The marketplace entry has a homepage and a description. Keywords are the plugin name and product terms.
+- `README.md` states the license, every network endpoint the plugin calls, and any credential the user must supply.
 - License is MIT, the same terms as `LICENSE`.
 - No secrets, tokens, account names, or customer data.
 - Add a skill, command, agent, hook, MCP server, or LSP server only when the job needs it.
@@ -83,7 +100,7 @@ If the current page for a host does not yet say how this marketplace installs th
 
 ## Change this repo
 
-Do the Official marketplace section first. Then use the `create-plugin`, `validate-plugin`, and `score-plugin` skills when they are available. When you are editing those skills, follow this file directly.
+Do the Official marketplace section first. Then follow Build a plugin. Use the `create-plugin`, `validate-plugin`, and `score-plugin` skills when they are available. When you are editing those skills, follow this file directly.
 
 Run:
 
