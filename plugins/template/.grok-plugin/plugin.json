@@ -1,0 +1,13 @@
+{
+  "name": "template",
+  "version": "0.1.0",
+  "description": "Filled-out sample of every Grok plugin component. Copy this plugin when adding the next one. Its orient skill maps whatever repository the agent is in.",
+  "author": {
+    "name": "Joules",
+    "url": "https://github.com/jewell-labs/joules"
+  },
+  "homepage": "https://github.com/jewell-labs/joules/tree/main/plugins/template",
+  "repository": "https://github.com/jewell-labs/joules",
+  "license": "MIT",
+  "keywords": ["joules", "joules template"]
+}

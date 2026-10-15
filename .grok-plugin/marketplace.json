@@ -1,0 +1,24 @@
+{
+  "name": "joules",
+  "description": "App-agnostic Grok plugins for agents working in any repository.",
+  "owner": {
+    "name": "Joules"
+  },
+  "plugins": [
+    {
+      "name": "template",
+      "description": "Filled-out sample of every Grok plugin component. Copy this plugin when adding the next one.",
+      "category": "development",
+      "version": "0.1.0",
+      "author": "Joules",
+      "homepage": "https://github.com/jewell-labs/joules/tree/main/plugins/template",
+      "keywords": ["joules", "joules template"],
+      "domains": [],
+      "tags": ["template", "reference"],
+      "source": {
+        "type": "local",
+        "path": "./plugins/template"
+      }
+    }
+  ]
+}

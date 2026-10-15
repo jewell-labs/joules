@@ -1,0 +1,29 @@
+{
+  "joules-template": {
+    "command": "python3",
+    "args": ["${GROK_PLUGIN_ROOT}/scripts/lsp_server.py"],
+    "extensionToLanguage": {
+      ".joules": "plaintext"
+    },
+    "transport": "stdio",
+    "env": {
+      "JOULES_LSP": "template"
+    },
+    "initializationOptions": {
+      "sample": true
+    },
+    "settings": {
+      "joules-template": {
+        "sample": true
+      }
+    },
+    "workspaceFolder": ".",
+    "workspaceOpen": {
+      "projects": []
+    },
+    "startupTimeout": 5000,
+    "shutdownTimeout": 2000,
+    "restartOnCrash": false,
+    "maxRestarts": 0
+  }
+}

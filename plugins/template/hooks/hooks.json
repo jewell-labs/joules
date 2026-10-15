@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "new|load",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "session-start.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

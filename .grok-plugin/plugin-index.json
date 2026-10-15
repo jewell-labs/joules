@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "plugins": {
+    "template": {
+      "version": "0.1.0",
+      "components": {
+        "skills": [
+          {
+            "name": "orient",
+            "description": "Map an unfamiliar repository before changing it."
+          }
+        ],
+        "commands": [
+          {
+            "name": "brief",
+            "description": "Ask for a short project brief of the current repository."
+          }
+        ],
+        "agents": [
+          {
+            "name": "reader",
+            "description": "Read-only subagent that returns a project brief."
+          }
+        ],
+        "hooks": [
+          {
+            "name": "SessionStart",
+            "description": "new|load"
+          }
+        ],
+        "mcpServers": [
+          {
+            "name": "joules-template",
+            "description": "stdio"
+          }
+        ],
+        "lspServers": [
+          {
+            "name": "joules-template",
+            "description": "stdio"
+          }
+        ]
+      }
+    }
+  }
+}
