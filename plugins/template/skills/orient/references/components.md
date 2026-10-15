@@ -32,7 +32,7 @@ Grok discovers these directories without path overrides in `plugin.json`.
 
 ## MCP server
 
-`.mcp.json` key `mcpServers`. Stdio fields: `command`, `args`, `env`. Use `${GROK_PLUGIN_ROOT}` when the command must find a file inside the plugin. Do not put tokens in this file.
+`.mcp.json` key `mcpServers`. Stdio fields: `command`, `args`, `env`. Use `${GROK_PLUGIN_ROOT}` when the command must find a file inside the plugin. Grok writes newline-delimited JSON on stdio, not Content-Length frames. Do not put tokens in this file.
 
 ## LSP server
 

@@ -1,6 +1,6 @@
 {
   "name": "template",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Filled-out sample of every Grok plugin component. Copy this plugin when adding the next one. Its orient skill maps whatever repository the agent is in.",
   "author": {
     "name": "Joules",

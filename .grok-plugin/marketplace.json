@@ -9,7 +9,7 @@
       "name": "template",
       "description": "Filled-out sample of every Grok plugin component. Copy this plugin when adding the next one.",
       "category": "development",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "author": "Joules",
       "homepage": "https://github.com/jewell-labs/joules/tree/main/plugins/template",
       "keywords": ["joules", "joules template"],

@@ -24,7 +24,7 @@ The field list for each file is `skills/orient/references/components.md`.
 - `brief` is the slash command for the same brief.
 - `reader` is the read-only subagent, spawned as `template:reader`. It may use the `joules-template` MCP server.
 - `SessionStart` appends a timestamp to the plugin data directory. It does not block the session.
-- `template_status` on the `joules-template` MCP server returns `joules template 0.1.0 ok`.
+- `template_status` on the `joules-template` MCP server returns `joules template 0.1.1 ok`.
 - The language server owns the `.joules` extension only, so it stays out of the way of real languages.
 
 ## Check

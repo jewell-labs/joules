@@ -1,38 +1,31 @@
 #!/usr/bin/env python3
 """Sample stdio MCP server for the Joules template plugin.
 
-Speaks Content-Length framed JSON-RPC. Exposes one tool, template_status.
-It does not read the workspace, the network, or credentials.
+Speaks newline-delimited JSON-RPC, which is what Grok's MCP client writes.
+Exposes one tool, template_status. It does not read the workspace, the
+network, or credentials.
 """
 
 import json
 import os
 import sys
 
-PROTOCOL = "2024-11-05"
-VERSION = os.environ.get("JOULES_TEMPLATE_VERSION", "0.1.0")
+VERSION = os.environ.get("JOULES_TEMPLATE_VERSION", "0.1.1")
 
 
 def send(message):
-    body = json.dumps(message).encode()
-    sys.stdout.buffer.write(f"Content-Length: {len(body)}\r\n\r\n".encode() + body)
-    sys.stdout.buffer.flush()
+    sys.stdout.write(json.dumps(message) + "\n")
+    sys.stdout.flush()
 
 
 def read_message():
-    headers = {}
-    while True:
-        line = sys.stdin.buffer.readline()
-        if line == b"":
-            return None
-        if line in (b"\r\n", b"\n"):
-            break
-        key, value = line.decode().split(":", 1)
-        headers[key.strip().lower()] = value.strip()
-    length = int(headers.get("content-length", "0"))
-    if length <= 0:
+    line = sys.stdin.readline()
+    if line == "":
         return None
-    return json.loads(sys.stdin.buffer.read(length))
+    line = line.strip()
+    if not line:
+        return read_message()
+    return json.loads(line)
 
 
 TOOLS = [
@@ -56,10 +49,11 @@ def handle(message):
     method = message.get("method")
     message_id = message.get("id")
     if method == "initialize":
+        params = message.get("params") or {}
         result(
             message_id,
             {
-                "protocolVersion": PROTOCOL,
+                "protocolVersion": params.get("protocolVersion") or "2024-11-05",
                 "capabilities": {"tools": {}},
                 "serverInfo": {"name": "joules-template", "version": VERSION},
             },
