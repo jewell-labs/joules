@@ -1,0 +1,13 @@
+{
+  "name": "joules-plugins",
+  "version": "0.4.0",
+  "description": "Create, evaluate, update, or score one Grok plugin from the current docs and one rubric.",
+  "author": {
+    "name": "Joules",
+    "url": "https://github.com/jewell-labs/joules"
+  },
+  "homepage": "https://github.com/jewell-labs/joules/tree/main/plugins/joules-plugins",
+  "repository": "https://github.com/jewell-labs/joules",
+  "license": "MIT",
+  "keywords": ["joules", "joules-plugins"]
+}

@@ -1,7 +1,6 @@
 #!/bin/sh
 # Add the URLs in marketplaces.txt, then install and enable the names in
-# plugins.txt. This file is copied into every Joules plugin. Keep the copies
-# identical. The hook process exits immediately. The child does the work.
+# plugins.txt. The hook process exits immediately. The child does the work.
 
 if [ "${JOULES_SETUP_CHILD:-}" != 1 ]; then
   JOULES_SETUP_CHILD=1 nohup "$0" </dev/null >/dev/null 2>&1 &

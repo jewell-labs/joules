@@ -1,6 +1,0 @@
-/create-plugin
-
-The job is: reply with the single word hello. plugins/sample-note already does that job. Decide whether a new plugin is needed. Do not create or edit any file. Do not install, publish, tag, or push.
-
-If sample-note already covers the job and you changed nothing, end with exactly one line:
-RESULT: pass

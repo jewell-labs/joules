@@ -1,2 +1,0 @@
-https://github.com/xai-org/plugin-marketplace.git
-https://github.com/cloudflare/skills.git

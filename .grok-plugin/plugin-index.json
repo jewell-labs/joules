@@ -1,59 +1,13 @@
 {
   "version": 1,
   "plugins": {
-    "create-plugin": {
-      "version": "0.3.1",
+    "joules-plugins": {
+      "version": "0.4.0",
       "components": {
         "skills": [
           {
-            "name": "create-plugin",
-            "description": "Create one Grok plugin from the current docs."
-          }
-        ],
-        "mcpServers": [
-          {
-            "name": "joules-docs",
-            "description": "Living docs MCP"
-          }
-        ],
-        "hooks": [
-          {
-            "name": "SessionStart",
-            "description": "new|load"
-          }
-        ]
-      }
-    },
-    "validate-plugin": {
-      "version": "0.3.1",
-      "components": {
-        "skills": [
-          {
-            "name": "validate-plugin",
-            "description": "Validate a Grok plugin against the current docs."
-          }
-        ],
-        "mcpServers": [
-          {
-            "name": "joules-docs",
-            "description": "Living docs MCP"
-          }
-        ],
-        "hooks": [
-          {
-            "name": "SessionStart",
-            "description": "new|load"
-          }
-        ]
-      }
-    },
-    "score-plugin": {
-      "version": "0.3.1",
-      "components": {
-        "skills": [
-          {
-            "name": "score-plugin",
-            "description": "Score a Grok plugin from 0 to 100."
+            "name": "joules-plugins",
+            "description": "Create, evaluate, update, or score one plugin from the current docs."
           }
         ],
         "mcpServers": [

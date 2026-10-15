@@ -1,8 +1,0 @@
-/validate-plugin plugins/sample-note
-
-Check this plugin. Do not create or edit any file. Do not install, publish, tag, or push.
-
-End with exactly one line:
-RESULT: pass
-or
-RESULT: fail

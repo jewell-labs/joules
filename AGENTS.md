@@ -12,7 +12,7 @@ The catalog is https://github.com/xai-org/plugin-marketplace `.grok-plugin/marke
 
 ### Set up
 
-1. A trusted Joules plugin does this on `SessionStart`. It reads `hooks/marketplaces.txt` and `hooks/plugins.txt` beside its hook, adds each marketplace URL, installs each plugin with `--trust`, and enables it. The same files are in every Joules plugin. Keep those copies identical.
+1. `joules-plugins` does this on `SessionStart`. It reads `hooks/marketplaces.txt` and `hooks/plugins.txt` beside its hook, adds each marketplace URL, installs each plugin with `--trust`, and enables it.
 2. When that hook has not run, do the same commands yourself. Then run `grok plugin marketplace update`.
 3. Fetch the catalog file above. Match the task against each entry's name, keywords, domains, and description.
 4. For every match, run `grok plugin install <name> --trust`, then `grok plugin enable <name>` when `grok plugin list` shows it disabled.
@@ -25,7 +25,7 @@ Leave catalog plugins that do not match this task uninstalled.
 | When | Where |
 | --- | --- |
 | The task matches a catalog name, keyword, domain, or description | First action, in the repo the task is about. Follow that plugin's skill. Say the plugin name, the field that matched, and the skill or command you ran. |
-| The task is authoring, validating, or scoring a plugin in this repo | After the catalog search. Use `create-plugin`, `validate-plugin`, and `score-plugin` only when no official entry does that job. |
+| The task is creating, evaluating, updating, or scoring a plugin | After the catalog search. Use `joules-plugins` only when no official entry does that job. |
 | An official plugin does part of the job | That plugin does its part. A Joules change may add only the missing step. |
 
 A Joules plugin has to fit one of these, and you say which:
@@ -55,7 +55,7 @@ A plugin stays valid when those pages change because the next session reads the 
 
 ## Build a plugin
 
-This is the procedure for `create-plugin`, `validate-plugin`, and `score-plugin`. Follow Official marketplace, Future-proof, and Catalog. Do not copy those sections into a skill.
+This is the procedure for `joules-plugins`. Follow Official marketplace, Future-proof, and Catalog. Do not copy those sections into a skill. Judge create, evaluate, update, and score with `plugins/joules-plugins/skills/joules-plugins/RUBRIC.md`. Do not keep a second rubric.
 
 1. Official marketplace first. Stop when an official plugin does the job. When the user wants a skill under `.grok/skills/` and not a marketplace plugin, use the session's `create-skill` and stop.
 2. Open these for every component you add. Request markdown from docs pages.
@@ -85,7 +85,7 @@ If the current page for a host does not yet say how this marketplace installs th
 
 ## Catalog
 
-- One plugin, one job, at `plugins/<name>/`.
+- One plugin you author does one job, at `plugins/<name>/`. This repo ships the authoring workflows as the single plugin `joules-plugins`.
 - List it in `.grok-plugin/marketplace.json`. Match the fields already in that file.
 - When `.grok-plugin/plugin-index.json` exists, list the components you actually added.
 - A plugin that lives in this repo uses a local source path.
@@ -99,12 +99,10 @@ If the current page for a host does not yet say how this marketplace installs th
 
 ## Change this repo
 
-Do the Official marketplace section first. Then follow Build a plugin. Use the `create-plugin`, `validate-plugin`, and `score-plugin` skills when they are available. When you are editing those skills, follow this file directly.
+Do the Official marketplace section first. Then follow Build a plugin. Use `joules-plugins` when it is available. When you are editing that skill, follow this file directly.
 
 Run:
 
 ```bash
-grok plugin validate plugins/create-plugin
-grok plugin validate plugins/validate-plugin
-grok plugin validate plugins/score-plugin
+grok plugin validate plugins/joules-plugins
 ```
