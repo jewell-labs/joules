@@ -81,12 +81,7 @@ with_flags() {
     --deny 'Bash(wrangler deploy*)' \
     --deny 'Bash(npm run deploy*)'
   if [ "$mode" = print ]; then
-    printf '%s' "$1"
-    shift
-    for arg in "$@"; do
-      printf ' %s' "$arg"
-    done
-    printf '\n'
+    python3 -c 'import shlex,sys; print(" ".join(shlex.quote(a) for a in sys.argv[1:]))' "$@"
     return 0
   fi
   run_grok "$@"
@@ -204,15 +199,43 @@ def text_of(content):
             parts.append(block)
     return "\n".join(parts)
 
+home = os.path.expanduser("~")
+
+def expand_user(path):
+    path = path.replace("${HOME}", home).replace("$HOME", home)
+    if path == "~" or path.startswith("~/"):
+        path = home + path[1:]
+    return path
+
 def inside(path):
     if not path or path.startswith("-") or path.startswith("&"):
         return True
+    path = expand_user(path)
     abs_path = path if os.path.isabs(path) else os.path.join(work, path)
     try:
         abs_path = os.path.realpath(abs_path)
     except OSError:
         return False
     return abs_path == work or abs_path.startswith(work + os.sep)
+
+def interpreter_outside(argv):
+    code = None
+    for index, arg in enumerate(argv):
+        if arg in ("-c", "-e") and index + 1 < len(argv):
+            code = argv[index + 1]
+            break
+    if not code:
+        return []
+    writes = re.search(r"writeFile|write_text|appendFile", code) or re.search(
+        r"open\s*\([^)]*['\"][wax+]+['\"]", code
+    )
+    if not writes:
+        return []
+    hits = []
+    for found in re.findall(r"(?:~|\$\{HOME\}|\$HOME|/)[^\s'\"`,)]*", code):
+        if not inside(found):
+            hits.append(found)
+    return hits
 
 def shell_outside(command):
     hits = []
@@ -227,13 +250,15 @@ def shell_outside(command):
     except ValueError:
         parts = command.split()
     bins = {"cp", "mv", "rsync", "install", "ln", "tee", "mkdir", "touch", "rm"}
+    interpreters = {"python", "python3", "node", "nodejs", "ruby", "perl"}
     i = 0
     while i < len(parts):
         tok = parts[i]
         if tok in ("&&", "||", ";", "|"):
             i += 1
             continue
-        if tok in bins or os.path.basename(tok) in bins:
+        base = os.path.basename(tok)
+        if tok in bins or base in bins:
             args = []
             i += 1
             while i < len(parts) and parts[i] not in ("&&", "||", ";", "|"):
@@ -243,16 +268,30 @@ def shell_outside(command):
             if args and not inside(args[-1]):
                 hits.append(args[-1])
             continue
-        if os.path.basename(tok) == "tar" or tok == "tar":
+        if base in interpreters:
+            argv = [tok]
+            i += 1
+            while i < len(parts) and parts[i] not in ("&&", "||", ";", "|"):
+                argv.append(parts[i])
+                i += 1
+            hits.extend(interpreter_outside(argv))
+            continue
+        if base == "tar" or tok == "tar":
             i += 1
             argv = [tok]
             while i < len(parts) and parts[i] not in ("&&", "||", ";", "|"):
                 argv.append(parts[i])
                 i += 1
-            if "-C" in argv and any("x" in a for a in argv if a.startswith("-")):
-                dest = argv[argv.index("-C") + 1]
-                if not inside(dest):
-                    hits.append(dest)
+            def extracts_tar(arg):
+                if arg.startswith("--"):
+                    return arg in ("--extract", "--get")
+                body = arg[1:] if arg.startswith("-") else arg
+                return bool(body) and "x" in body and body.isalpha()
+            extracts = any(extracts_tar(arg) for arg in argv[1:])
+            if extracts and "-C" in argv:
+                c_at = argv.index("-C")
+                if c_at + 1 < len(argv) and not inside(argv[c_at + 1]):
+                    hits.append(argv[c_at + 1])
             continue
         i += 1
     return hits
@@ -261,7 +300,6 @@ labels = ("destination", "package name", "title")
 replies = []
 early = False
 outside = []
-readonly = {"read_file", "grep", "list_dir", "glob", "web_search", "web_fetch", "open_page", "todo_write"}
 for line in open(chat):
     event = json.loads(line)
     if event.get("type") != "assistant":
@@ -283,7 +321,7 @@ for line in open(chat):
             command = parsed.get("command") if isinstance(parsed, dict) else args
             outside.extend(shell_outside(command or ""))
             continue
-        if name.lower() in readonly:
+        if name.lower() == "todo_write":
             continue
         if any(part in name.lower() for part in ("write", "edit", "delete", "patch", "remove", "rename", "move", "copy")):
             strings = []
@@ -310,22 +348,18 @@ if outside:
     sys.exit(1)
 
 def negated(line):
-    return re.search(r"\b(not|never|n't)\b(?:\W+\w+){0,8}\b(ask|destination|package name|title)\b", line, re.I)
+    return re.search(r"\b(?:not|never)\b|n't", line, re.I) is not None
 
 def question_line(line):
-    text = line.strip()
-    if not text:
-        return False
-    if "?" in text:
-        return True
-    return re.match(r"^(\d+[.)]|[-*])\s+", text) is not None
+    return "?" in line
 
 def asked_labels(line):
     low = line.lower()
     hits = []
-    # A directory question is the destination question even when it does not repeat that word.
-    if "destination" in low or (
-        re.search(r"\b(where|which|what)\b", low) and re.search(r"\b(directory|folder|path)\b", low)
+    if (
+        "destination" in low
+        or re.search(r"\bwhere\b.*\b(?:app|directory|folder|path)\b", low)
+        or re.search(r"\b(?:which|what)\b.*\b(?:directory|folder|path)\b", low)
     ):
         hits.append("destination")
     if "package name" in low or re.search(r"\bpackage\b", low):
@@ -351,20 +385,16 @@ PY
 python3 - "$work" <<'PY' || fail "wrote the app before the questions were answered"
 import os, sys
 work = os.path.realpath(sys.argv[1])
-markers = {
-    "package.json", "wrangler.jsonc", "vite.config.ts", "tsconfig.json",
-    "src/server.ts", "src/server/mcp.ts",
-}
 for dirpath, dirnames, filenames in os.walk(work):
     rel = os.path.relpath(dirpath, work)
     parts = [] if rel == "." else rel.split(os.sep)
-    if parts[:1] == [".git"]:
-        continue
     if parts[:1] == [".grok"]:
+        names = {"package.json", "wrangler.jsonc", "vite.config.ts", "tsconfig.json"}
+        prefixes = ("src" + os.sep, "public" + os.sep, "deploy" + os.sep)
         for name in filenames:
             rel_file = os.path.join(rel, name)
             tail = rel_file.split(".grok" + os.sep, 1)[-1]
-            if tail in markers or tail.startswith("src" + os.sep) or tail.startswith("public" + os.sep) or tail.startswith("deploy" + os.sep) or name in ("package.json", "wrangler.jsonc"):
+            if name in names or tail.startswith(prefixes):
                 sys.stderr.write("app file under .grok: %s\n" % rel_file)
                 sys.exit(1)
         continue
@@ -403,12 +433,36 @@ commands = []
 ok = False
 
 def flag(argv, flag_name):
-    if flag_name not in argv:
-        return None
-    index = argv.index(flag_name)
-    if index + 1 >= len(argv):
-        return None
-    return argv[index + 1]
+    for index, item in enumerate(argv):
+        if item == flag_name and index + 1 < len(argv):
+            return argv[index + 1]
+        if item.startswith(flag_name + "="):
+            return item[len(flag_name) + 1:]
+    return None
+
+def command_argv(argv):
+    index = 0
+    while index < len(argv):
+        base = os.path.basename(argv[index])
+        if base == "env":
+            index += 1
+            while index < len(argv) and "=" in argv[index] and not argv[index].startswith("-"):
+                index += 1
+            continue
+        if base in {"sh", "bash", "command"}:
+            index += 1
+            while index < len(argv) and argv[index].startswith("-"):
+                bit = argv[index]
+                index += 1
+                if "c" in bit and index < len(argv):
+                    try:
+                        inner = shlex.split(argv[index])
+                    except ValueError:
+                        inner = argv[index].split()
+                    return command_argv(inner)
+            continue
+        return argv[index:]
+    return []
 
 for line in open(chat):
     event = json.loads(line)
@@ -430,10 +484,10 @@ for line in open(chat):
         commands.append(command)
         for chunk in re.split(r"\s*(?:&&|\|\||;|\n)\s*", command):
             try:
-                argv = shlex.split(chunk)
+                argv = command_argv(shlex.split(chunk))
             except ValueError:
                 continue
-            if not any(os.path.basename(item) == "create.sh" for item in argv):
+            if not argv or os.path.basename(argv[0]) != "create.sh":
                 continue
             got_dest = flag(argv, "--dest")
             if got_dest is None:

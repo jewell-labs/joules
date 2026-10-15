@@ -26,7 +26,13 @@ The plugin root is the directory that contains `skills/web-app/SKILL.md`.
 
 When the user wants a new app, follow `commands/create.md` in the plugin root. That command runs `scripts/create.sh`, which copies `template/`. The copy includes `.github/workflows/release.yml` and one MCP server on the worker. The workflow is the extra step on top of `cloudflare`, `cloudflare-web-apps`, and `wrangler`. The scripts still run when those plugins are not installed.
 
-Ask three questions on their own lines, one for the destination directory, one for the package name, and one for the title. Then stop. Do not guess them, do not write the app, and do not run `scripts/create.sh` until the user has answered each one.
+Ask these three questions, one per line, and then stop:
+
+Where should the app go?
+What is the package name?
+What is the title?
+
+Do not guess them, do not write the app, and do not run `scripts/create.sh` until the user has answered each one.
 
 ## Healthcheck
 
