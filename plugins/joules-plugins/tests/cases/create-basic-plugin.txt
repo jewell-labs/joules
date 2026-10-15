@@ -1,0 +1,13 @@
+/joules-plugins create hello-note
+
+Create one plugin at plugins/hello-note. Its only job is a skill that replies with the single word hello.
+
+Do only this:
+- add plugins/hello-note with a manifest, a README, and skills/hello-note/SKILL.md
+- register hello-note in .grok-plugin/marketplace.json
+- run grok plugin validate plugins/hello-note
+
+Do not open web pages. Do not install, publish, tag, or push. Do not edit any other plugin.
+
+If validate exits 0, end with exactly one line:
+RESULT: pass

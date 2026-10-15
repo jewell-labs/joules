@@ -15,6 +15,6 @@ Then run `/joules-plugins` with `create`, `evaluate`, `update`, or `score`. On t
 <!-- joules-test-status:start -->
 | Prompt | When | Result | Load | Job | Procedure | Future-proof | Catalog | Safety | Components | Hosts | Behavior | Usage |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| evaluating | 2026-10-15T01:37:13Z | pass | 15 | - | - | - | - | 10 | - | - | 5 | 17934 in, 360 out, 2 turns, $0.01660696 |
-| negative | 2026-10-15T01:36:42Z | pass | - | 15 | - | - | - | 10 | - | - | 5 | 18012 in, 635 out, 1 turns, $0.01380468 |
+| create-basic-plugin | 2026-10-15T01:42:48Z | pass | 15 | 15 | - | - | 10 | 10 | - | - | 5 | 47700 in, 3498 out, 6 turns, $0.05582664 |
+| evaluate-sample-plugin | 2026-10-15T01:42:59Z | pass | 15 | - | - | - | - | 10 | - | - | 5 | 18600 in, 457 out, 2 turns, $0.01714892 |
 <!-- joules-test-status:end -->
