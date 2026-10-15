@@ -227,7 +227,7 @@ def interpreter_outside(argv):
     if not code:
         return []
     writes = re.search(r"writeFile|write_text|appendFile", code) or re.search(
-        r"open\s*\([^)]*['\"][wax+]+['\"]", code
+        r"open\s*\([^)]*['\"][wax+][wax+b]*['\"]", code
     )
     if not writes:
         return []
@@ -241,6 +241,8 @@ def shell_outside(command):
     hits = []
     for match in re.finditer(r"(?:^|[\s;|&])(\d*)>>?\s*([^\s;&|]+)", command):
         path = match.group(2)
+        if len(path) >= 2 and path[0] == path[-1] and path[0] in "\"'":
+            path = path[1:-1]
         if path.startswith("&"):
             continue
         if not inside(path):
@@ -358,7 +360,7 @@ def asked_labels(line):
     hits = []
     if (
         "destination" in low
-        or re.search(r"\bwhere\b.*\b(?:app|directory|folder|path)\b", low)
+        or re.search(r"\bwhere\b.*\bgo\b", low)
         or re.search(r"\b(?:which|what)\b.*\b(?:directory|folder|path)\b", low)
     ):
         hits.append("destination")
