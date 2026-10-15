@@ -1,5 +1,5 @@
 ---
-description: Score the README prompt and write the table.
+description: Score one README prompt and write that row.
 argument-hint: "[destination to keep]"
 ---
 

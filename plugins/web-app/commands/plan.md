@@ -1,5 +1,5 @@
 ---
-description: Settle one web app's decisions, or ask one unknown.
+description: Settle decisions for a new or extended app, or ask one unknown.
 argument-hint: "[what to create]"
 ---
 

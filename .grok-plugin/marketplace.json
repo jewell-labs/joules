@@ -22,12 +22,12 @@
     },
     {
       "name": "web-app",
-      "description": "Create a Void pages app on Cloudflare Workers. The app releases the branches it lists and serves one public HTTP healthcheck.",
+      "description": "Create or extend a Void pages app on Cloudflare Workers. A page, a table, or a stream is one addition. The app connects the branches it lists to an automatic validate-build-deploy pipeline without a workflow file, and serves one public HTTP healthcheck.",
       "category": "development",
-      "version": "0.7.0",
+      "version": "0.10.2",
       "author": "Joules",
       "homepage": "https://github.com/jewell-labs/joules/tree/main/plugins/web-app",
-      "keywords": ["web-app", "void", "cloudflare", "solid", "mcp"],
+      "keywords": ["web-app", "void", "cloudflare", "solid", "mcp", "webmcp"],
       "domains": [],
       "tags": ["web"],
       "source": {

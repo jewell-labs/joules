@@ -43,22 +43,26 @@
       }
     },
     "web-app": {
-      "version": "0.7.0",
+      "version": "0.10.2",
       "components": {
         "skills": [
           {
             "name": "scaffold",
-            "description": "Write a Void pages app from the current docs. The app releases listed branches and serves one public HTTP healthcheck."
+            "description": "Write or extend a Void pages app from the current docs. The app connects listed branches without a workflow file and serves one public HTTP healthcheck."
           }
         ],
         "commands": [
           {
             "name": "plan",
-            "description": "Settle one web app's decisions, or ask one unknown."
+            "description": "Settle decisions for a new or extended app, or ask one unknown."
           },
           {
             "name": "create",
             "description": "Write a Void pages app from the plan reply."
+          },
+          {
+            "name": "extend",
+            "description": "Add the destinations, tables, and streams the prompt names."
           },
           {
             "name": "validate",
@@ -66,7 +70,7 @@
           },
           {
             "name": "evaluate",
-            "description": "Score the README prompt and write the table."
+            "description": "Score one README prompt and write that row."
           }
         ]
       }

@@ -16,7 +16,7 @@ grok plugin install joules-plugins --trust
 | Plugin | What it adds |
 | --- | --- |
 | [joules-plugins](plugins/joules-plugins) | Creates, evaluates, updates, and scores one plugin. The rubric covers a single skill through a plugin with several components. |
-| [web-app](plugins/web-app) | Creates a Void pages app in a directory. The app is Solid on Cloudflare Workers, releases the branches it lists, and serves one public HTTP healthcheck. |
+| [web-app](plugins/web-app) | Creates or extends a Void pages app. The app is Solid on Cloudflare Workers, adds a page, a table, or a stream as one change, connects the branches it lists without a workflow file, and serves one public HTTP healthcheck. |
 
 ## Add a plugin
 
@@ -26,9 +26,7 @@ From this checkout, follow `AGENTS.md`.
 
 ## Hosts
 
-Grok Build is the install path today.
-
-grok.com and Grok Bot follow the same skill text. `joules-plugins` connects the docs MCP at the endpoint listed in <https://docs.x.ai/llms.txt>, so a bot or a grok.com custom connector can attach that server over HTTPS. Host-specific steps come from the current connector and Grok Bot pages.
+Grok Build is the install path in the commands above. Every other host follows the Hosts section of [AGENTS.md](AGENTS.md).
 
 ## Layout
 

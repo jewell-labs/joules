@@ -52,7 +52,7 @@ Volatile contracts stay on the pages you opened this session. A row scores 0 whe
 | Catalog (10) | README, manifest, license, and marketplace entry exist. The index matches the files. | Homepage and keywords are the plugin name and product terms. The README names every network endpoint and any credential. | The same is true for every component. |
 | Safety (10) | No secrets. Publish, tag, push, delete, send, and spend wait for the user. | The security section you opened would accept the hook or MCP server. | That section would accept every component. |
 | Components (10) | A skill is present only when the job needs one. | The extra component is one the current page says delivers the job. | Nothing unused is included. The index lists exactly the components on disk. |
-| Hosts (5) | One procedure, and Grok Build can run it. | Same evidence as Simple. | A claimed grok.com or Grok Bot path uses public HTTPS, and you opened the current connector or Bot page. When that page has no install path, the reply says so. |
+| Hosts (5) | One procedure in the repo, and Grok Build can run it. No host-local credential store. Any MCP URL is public HTTPS. You opened the current Bot skills page. When it has no install path for this marketplace, the reply says so. | Same evidence as Simple. | Same evidence as Simple. |
 | Behavior (5) | The behavior test is named. | The test covers the extra component. | After the user asks to install: `grok inspect` and `/<skill>` on a safe input. |
 
 ### Pass and score
