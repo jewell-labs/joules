@@ -21,12 +21,12 @@ do
   [ -f "$file" ] || { echo "missing $file" >&2; exit 1; }
 done
 
-# Custom entry delegates to the Solid Start server. The package path stays the app.
-if grep -q 'solid-start/server-entry' wrangler.jsonc; then
-  :
-elif grep -q 'solid-start/server-entry' src/server.ts && grep -q '"main": "src/server.ts"' wrangler.jsonc; then
-  :
-else
+# This app's only worker entry is src/server.ts.
+if [ ! -f src/server.ts ]; then
+  echo "missing src/server.ts" >&2
+  exit 1
+fi
+if ! grep -q 'solid-start/server-entry' src/server.ts || ! grep -q '"main": "src/server.ts"' wrangler.jsonc; then
   echo "server entry is not the Solid one" >&2
   exit 1
 fi

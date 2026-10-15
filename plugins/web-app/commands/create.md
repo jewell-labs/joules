@@ -5,6 +5,6 @@ argument-hint: "[destination]"
 
 Create one app by running this plugin's `scripts/create.sh`. The plugin root is the directory that contains `commands/create.md`. From this file, the script is `../scripts/create.sh`.
 
-Read `scripts/create.sh --help`. Ask in the reply for every answer that is still missing: the destination directory, the package name, and the title. Then stop. Do not guess them, do not write the app, and do not run the script until each answer is in the conversation. Pass the answers as `--dest`, `--name`, and `--title`. The script copies `template/` and fills those answers in. The copy includes the release workflow and the worker's public HTTP healthcheck. Branch names and Wrangler commands stay in the copy's `README`, not in this command.
+Read `scripts/create.sh --help`. Ask three questions on their own lines, one for the destination directory, one for the package name, and one for the title. Then stop. Do not guess them, do not write the app, and do not run the script until each answer is in the conversation. Pass the answers as `--dest`, `--name`, and `--title`. The script copies `template/` and fills those answers in. The copy includes the release workflow and the worker's public HTTP healthcheck. Branch names and Wrangler commands stay in the copy's `README`, not in this command.
 
 Do not install, deploy, push, or spend unless the user asked. Return the destination path the script prints.
