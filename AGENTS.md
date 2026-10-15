@@ -38,7 +38,7 @@ Grok Build skills that already appear in the session are used the same way. Call
 
 ## Future-proof
 
-This rule covers every plugin, skill, and script in this repo.
+This rule covers every plugin and skill in this repo.
 
 xAI changes skill frontmatter, agent frontmatter, hook events, MCP and LSP config, marketplace fields, model ids, tool names, and API parameters. Those contracts live on the current docs, not in this repository.
 
@@ -55,7 +55,7 @@ A plugin stays valid when those pages change because the next session reads the 
 
 ## Build a plugin
 
-This is the procedure for `joules-plugins`. Follow Official marketplace, Future-proof, and Catalog. Do not copy those sections into a skill. Judge create, evaluate, update, and score with `plugins/joules-plugins/skills/joules-plugins/RUBRIC.md`. Do not keep a second rubric.
+This is the procedure for `joules-plugins`. Follow Official marketplace, Future-proof, Layout, and Catalog. Do not copy those sections into a skill. Judge create, evaluate, update, and score with the Rubric section of `plugins/joules-plugins/skills/author/SKILL.md`. Do not keep a second rubric.
 
 1. Official marketplace first. Stop when an official plugin does the job. When the user wants a skill under `.grok/skills/` and not a marketplace plugin, use the session's `create-skill` and stop.
 2. Open these for every component you add. Request markdown from docs pages.
@@ -64,7 +64,7 @@ This is the procedure for `joules-plugins`. Follow Official marketplace, Future-
    - https://github.com/xai-org/plugin-marketplace/blob/main/CONTRIBUTING.md
    - https://docs.x.ai/grok-bot/skills-routines-and-automations
    Apply Future-proof when the public page and the CLI disagree.
-3. Write each skill as one workflow. The description says what it does, when it runs, and the slash name. The body states when to use it, the inputs, the steps, how to check the result, what to return, and what a person must approve. Name the tools the steps use. A command in the body is an instruction for the agent to run. Link a living docs page for any contract that can change. Put long reference material in a sibling file.
+3. Write each skill as one workflow. The description says what it does, when it runs, and the slash name. The body states when to use it, the inputs, the steps, how to check the result, what to return, and what a person must approve. Name the tools the steps use. A command in the body is an instruction for the agent to run. Link a living docs page for any contract that can change. The rubric belongs in the skill that judges. Do not add `RUBRIC.md`.
 4. Package the plugin by the Catalog section.
 5. Run `grok plugin validate plugins/<name>`. After the user asks to install, run `grok plugin install <name> --trust`, then `grok inspect` and confirm the skill source is `plugin: <name>`. Run `grok mcp doctor` when the plugin has an MCP server. Invoke `/<skill>` on a safe input. Run `grok plugin tag` only when the user asks to publish.
 6. Re-read the security section of the contributing page and reject the classes it rejects.
@@ -83,9 +83,32 @@ Write the skill body so the other hosts can follow it without a fork:
 
 If the current page for a host does not yet say how this marketplace installs there, say that. Leave the skill as one procedure.
 
+## Layout
+
+The plugin is the public parent. Its directory name is the name a person installs. A skill, command, or agent inside it is one job that parent does. Name that part for the job. Never give it the plugin's name. A part that repeats the parent name is a second name for the whole plugin.
+
+```text
+plugins/<plugin>/
+  .grok-plugin/plugin.json
+  README.md
+  skills/<job>/SKILL.md
+  commands/<job>.md
+  agents/<job>.md
+  hooks/hooks.json
+  .mcp.json
+```
+
+`joules-plugins` is the authoring parent. Its skill is `author`. Its commands are `create`, `evaluate`, `update`, and `score`. `web-app` is the app parent. Its skill is `scaffold`. Its commands are `plan`, `create`, `validate`, and `evaluate`.
+
+A skill and a command in the same plugin do not share a name. The skill is the procedure. The command is the slash entry for one part of that procedure, and it points at that part instead of copying it.
+
+Do not add a `scripts/` directory. The agent follows the skill and writes the result. A hook is the command the current hooks page runs, and it is not a second copy of the skill: https://docs.x.ai/build/features/hooks
+
+Copy this shape for a new plugin. Do not invent a second parent name for a part.
+
 ## Catalog
 
-- One plugin you author does one job, at `plugins/<name>/`. This repo ships `joules-plugins` for authoring and `web-app` for a new app. A new app follows that plugin's plan, create, and validate commands.
+- One plugin you author does one job, at `plugins/<name>/`. This repo ships `joules-plugins` for authoring and `web-app` for a new app. A new app follows the `scaffold` skill and that plugin's plan, create, and validate commands.
 - List it in `.grok-plugin/marketplace.json`. Match the fields already in that file.
 - When `.grok-plugin/plugin-index.json` exists, list the components you actually added.
 - A plugin that lives in this repo uses a local source path.

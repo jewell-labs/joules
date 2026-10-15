@@ -1,6 +1,6 @@
 {
   "name": "web-app",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Create a Void pages app on Cloudflare Workers. The app releases the branches it lists and serves one public HTTP healthcheck.",
   "author": {
     "name": "Joules",

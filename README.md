@@ -20,7 +20,7 @@ grok plugin install joules-plugins --trust
 
 ## Add a plugin
 
-Search the official catalog first. Then `/joules-plugins` with `create`, `evaluate`, `update`, or `score`. `grok plugin validate plugins/<name>` is the manifest check. After you ask to install, `grok inspect` and `/joules-plugins` on a safe input are the behavior check. The plugin README table is the run record. The prompt in that table is the whole job. Nothing else is stored.
+Search the official catalog first. Then `/author` with `create`, `evaluate`, `update`, or `score`. `grok plugin validate plugins/<name>` is the manifest check. After you ask to install, `grok inspect` and `/author` on a safe input are the behavior check. The plugin README table is the run record. The prompt in that table is the whole job. Nothing else is stored.
 
 From this checkout, follow `AGENTS.md`.
 
@@ -36,5 +36,7 @@ grok.com and Grok Bot follow the same skill text. `joules-plugins` connects the 
 AGENTS.md                            rules for agents in this repo
 .grok-plugin/marketplace.json        catalog Grok reads
 .grok-plugin/plugin-index.json       component list shown before install
-plugins/<name>/                      one plugin
+plugins/<name>/                      one plugin, the public parent
 ```
+
+A plugin name is the parent a person installs. A skill or command inside it is named for its job, not for the plugin. The rule is in [AGENTS.md](AGENTS.md).

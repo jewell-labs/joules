@@ -3,7 +3,7 @@ description: Score one plugin against the Joules rubric without editing its file
 argument-hint: "[plugin path]"
 ---
 
-Evaluate and validate are the same job. Leave the plugin files unchanged. The rubric is `../skills/joules-plugins/RUBRIC.md`.
+Evaluate and validate are the same job. Leave the plugin files unchanged. The rubric is the Rubric section of `../skills/author/SKILL.md`.
 
 1. Run `grok plugin validate` on the plugin path when `grok` is on `PATH`. When it is missing, record that Load was not run.
 2. Read the plugin, its marketplace entry, and `.grok-plugin/plugin-index.json` when the repo has one.

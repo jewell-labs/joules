@@ -3,7 +3,7 @@ description: Create one plugin from the current docs and the Joules rubric.
 argument-hint: "[name]"
 ---
 
-Create one marketplace plugin. The plugin root is the directory that contains `commands/create.md`. The rubric is `../skills/joules-plugins/RUBRIC.md`.
+Create one marketplace plugin. The plugin root is the directory that contains `commands/create.md`. The rubric is the Rubric section of `../skills/author/SKILL.md`.
 
 ## Docs
 
@@ -23,7 +23,7 @@ Ask once when the job this plugin does, or its kebab-case name, is missing. A pa
 4. Keep secrets, tokens, and account names out of the plugin. A public MCP URL can go in `.mcp.json`. The README names that endpoint.
 5. In a marketplace repo, register the plugin and update `.grok-plugin/plugin-index.json` so it lists the components you added and no others.
 6. Run `grok plugin validate` on the plugin directory when `grok` is on `PATH`, and fix load errors. When it is not, say the CLI check did not run.
-7. Fill the rubric in the reply. The behavior test is install, `grok inspect`, `grok mcp doctor` when the plugin has an MCP server, and `/joules-plugins` on a safe input. Run that test only after the user asks to install.
+7. Fill the Rubric section in the reply. The behavior test is install, `grok inspect`, `grok mcp doctor` when the plugin has an MCP server, and `/<skill>` on a safe input. Run that test only after the user asks to install.
 
 ## Return
 

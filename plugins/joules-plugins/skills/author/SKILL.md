@@ -1,4 +1,39 @@
-# Rubric
+---
+name: author
+description: >
+  Create, evaluate, update, or score one Grok marketplace plugin from the
+  current docs and the rubric in this skill. Use when the user wants to add,
+  check, change, or rate a plugin, or runs /author. The parent plugin is
+  joules-plugins.
+when-to-use: >
+  create a plugin, evaluate a plugin, validate a plugin, update a plugin,
+  score a plugin, /author
+argument-hint: "[create|evaluate|update|score] [name or path]"
+metadata:
+  author: Joules
+  short-description: Author one plugin
+---
+
+# Author
+
+The plugin `joules-plugins` is the parent. This skill is the procedure. Route one job to one command. Evaluate and validate are the same job. Ask once when the user did not say create, evaluate, update, or score.
+
+| Job | Command |
+| --- | --- |
+| create | `commands/create.md` |
+| evaluate or validate | `commands/evaluate.md` |
+| update | `commands/update.md` |
+| score | `commands/score.md` |
+
+The Rubric section is the only matrix. Do not invent a second rubric, and do not add a `RUBRIC.md`.
+
+A child session returns a summary. The parent uses that summary. It does not look for a results file.
+
+Follow the Build a plugin section of Joules `AGENTS.md`. In this repository that file is at the repo root. Otherwise read https://raw.githubusercontent.com/jewell-labs/joules/main/AGENTS.md. The create command names the docs pages to open.
+
+Publish, tag, push, or install for anyone else only when the user asked.
+
+## Rubric
 
 One matrix for creating, evaluating, updating, and scoring a plugin. Read it before you judge. Score only from a file you opened or a command you ran. Quote the file, or say what is missing.
 
@@ -20,7 +55,7 @@ Volatile contracts stay on the pages you opened this session. A row scores 0 whe
 | Hosts (5) | One procedure, and Grok Build can run it. | Same evidence as Simple. | A claimed grok.com or Grok Bot path uses public HTTPS, and you opened the current connector or Bot page. When that page has no install path, the reply says so. |
 | Behavior (5) | The behavior test is named. | The test covers the extra component. | After the user asks to install: `grok inspect` and `/<skill>` on a safe input. |
 
-## Pass and score
+### Pass and score
 
 Evaluating passes only when every applicable cell is full. Any 0 fails.
 
@@ -30,6 +65,6 @@ Updating edits only rows that are not full, then fills this matrix again.
 
 Creating fills this matrix after the files exist.
 
-## Test runs
+### Test runs
 
 A run is the reply in this turn. Fill every row. A missing row is a fail. Points are the cell in the matching column, or 0. Evidence is the `grok plugin validate` output and a file opened during the turn. State that evidence in the reply. Do not save a transcript, a log, or a score file beside the plugin.

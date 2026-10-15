@@ -1,12 +1,12 @@
 # joules-plugins
 
-Creates, evaluates, updates, and scores a Grok plugin. One rubric in `skills/joules-plugins/RUBRIC.md` is the matrix for every job, from a single skill to a plugin with several components.
+Creates, evaluates, updates, and scores a Grok plugin. The Rubric section of `skills/author/SKILL.md` is the matrix for every job, from a single skill to a plugin with several components.
 
 ```bash
 grok plugin install joules-plugins --trust
 ```
 
-Then run `/joules-plugins` with `create`, `evaluate`, `update`, or `score`. On the next session the plugin adds the marketplace URLs in `hooks/marketplaces.txt` and installs the plugins named in `hooks/plugins.txt`. License is MIT, the same terms as the repository `LICENSE`. Network calls are those git URLs, through `grok plugin`, and the docs MCP at the endpoint listed in <https://docs.x.ai/llms.txt>. None of them take a credential.
+The parent name is `joules-plugins`. The skill is `/author`. Then run `create`, `evaluate`, `update`, or `score`. On the next session the plugin adds the marketplace URLs in `hooks/marketplaces.txt` and installs the plugins named in `hooks/plugins.txt`. License is MIT, the same terms as the repository `LICENSE`. Network calls are those git URLs, through `grok plugin`, and the docs MCP at the endpoint listed in <https://docs.x.ai/llms.txt>. None of them take a credential.
 
 ## Last run
 

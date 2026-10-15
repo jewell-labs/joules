@@ -2,11 +2,11 @@
   "version": 1,
   "plugins": {
     "joules-plugins": {
-      "version": "0.5.0",
+      "version": "0.6.0",
       "components": {
         "skills": [
           {
-            "name": "joules-plugins",
+            "name": "author",
             "description": "Create, evaluate, update, or score one plugin from the current docs."
           }
         ],
@@ -43,26 +43,22 @@
       }
     },
     "web-app": {
-      "version": "0.6.0",
+      "version": "0.7.0",
       "components": {
         "skills": [
           {
-            "name": "web-app",
-            "description": "Create a Void pages app. The app releases listed branches and serves one public HTTP healthcheck."
-          },
-          {
-            "name": "plan",
-            "description": "Map a web app request onto create.sh flags from --help."
+            "name": "scaffold",
+            "description": "Write a Void pages app from the current docs. The app releases listed branches and serves one public HTTP healthcheck."
           }
         ],
         "commands": [
           {
             "name": "plan",
-            "description": "Map a web app request onto create.sh flags, or ask one unknown."
+            "description": "Settle one web app's decisions, or ask one unknown."
           },
           {
             "name": "create",
-            "description": "Create a Void pages app from a plan argv."
+            "description": "Write a Void pages app from the plan reply."
           },
           {
             "name": "validate",
