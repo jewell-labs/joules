@@ -1,7 +1,7 @@
 {
   "name": "web-app",
-  "version": "0.2.0",
-  "description": "Copy the web-app template into a directory, or make an app pass the web-app check.",
+  "version": "0.3.0",
+  "description": "Copy the web-app template into a directory, or make an app pass the web-app check. The template releases listed branches.",
   "author": {
     "name": "Joules",
     "url": "https://github.com/jewell-labs/joules"

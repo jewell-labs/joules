@@ -15,5 +15,26 @@
       "database_name": "__APP_NAME__",
       "database_id": "00000000-0000-0000-0000-000000000000"
     }
-  ]
+  ],
+  // Bindings are not inherited, so each environment repeats D1.
+  "env": {
+    "production": {
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "__APP_NAME__",
+          "database_id": "00000000-0000-0000-0000-000000000000"
+        }
+      ]
+    },
+    "staging": {
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "__APP_NAME__",
+          "database_id": "00000000-0000-0000-0000-000000000000"
+        }
+      ]
+    }
+  }
 }

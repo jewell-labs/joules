@@ -1,0 +1,4 @@
+{
+  "main": "production",
+  "staging": "staging"
+}

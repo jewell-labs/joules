@@ -12,6 +12,7 @@ dist-ssr
 .tanstack
 .wrangler
 .output
+screenshots
 .vinxi
 worker-configuration.d.ts
 __unconfig*

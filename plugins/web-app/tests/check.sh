@@ -33,9 +33,18 @@ need public/sw.js
 need public/offline.html
 need public/manifest.webmanifest
 need drizzle/0000_sessions.sql
+need .github/workflows/release.yml
+need deploy/branches.json
+need scripts/verify.sh
+need scripts/screenshot.sh
+need scripts/release.sh
+need scripts/branch-env.sh
+need scripts/notify.sh
+need scripts/version.sh
+need tests/ready.test.ts
 
 grep -q '"~/\*"' "$root/tsconfig.json" || say "tsconfig is missing the ~/* path alias"
-for name in node_modules .output dist .dev.vars .env .wrangler; do
+for name in node_modules .output dist .dev.vars .env .wrangler screenshots; do
   grep -q "$name" "$root/.gitignore" || say "gitignore is missing $name"
 done
 grep -q 'solid-start/server-entry' "$root/wrangler.jsonc" || say "wrangler main is not the Solid Start server entry"
@@ -45,6 +54,11 @@ grep -q 'd1_databases' "$root/wrangler.jsonc" || say "wrangler is missing a D1 b
 grep -q 'react-start' "$root/wrangler.jsonc" && say "wrangler points at the React server entry"
 grep -q '@tanstack/solid-start' "$root/package.json" || say "package.json is missing Solid Start"
 grep -q '"solid-js"' "$root/package.json" || say "package.json is missing solid-js"
+grep -q '"version"' "$root/package.json" || say "package.json is missing a version"
+grep -q '"test"' "$root/package.json" || say "package.json is missing the test script"
+grep -q '^DEPLOY_WEBHOOK_URL=$' "$root/.dev.vars.example" || say ".dev.vars.example is missing DEPLOY_WEBHOOK_URL"
+grep -q 'scripts/release.sh' "$root/.github/workflows/release.yml" || say "workflow does not run scripts/release.sh"
+grep -q 'deploy/branches.json' "$root/scripts/branch-env.sh" || say "branch map is not read"
 grep -q '"react"' "$root/package.json" && say "package.json depends on react"
 grep -q 'solid-start' "$root/vite.config.ts" || say "vite config is missing the Solid Start plugin"
 grep -q 'react-start' "$root/vite.config.ts" && say "vite config uses the React Start plugin"

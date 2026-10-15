@@ -1,5 +1,6 @@
 {
   "name": "__APP_NAME__",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,6 +9,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "deploy": "npm run build && wrangler deploy",
+    "test": "node --test tests/ready.test.ts",
     "cf-typegen": "wrangler types"
   },
   "dependencies": {

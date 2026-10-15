@@ -2,7 +2,8 @@
 name: web-app
 description: >
   Create a TanStack Start app on Cloudflare Workers from the web-app
-  template, or make an existing app pass the web-app check. Use when the
+  template, or make an existing app pass the web-app check. The template
+  carries the release workflow for branches it lists. Use when the
   user wants a new app from that template, wants an app made 100% compliant,
   or runs /web-app.
 when-to-use: >
@@ -24,7 +25,7 @@ The plugin root is the directory that contains `skills/web-app/SKILL.md`.
 
 ## Create
 
-When the user wants a new app, follow `commands/create.md` in the plugin root. That command runs `scripts/create.sh`, which copies `template/`.
+When the user wants a new app, follow `commands/create.md` in the plugin root. That command runs `scripts/create.sh`, which copies `template/`. The copy includes `.github/workflows/release.yml`. That workflow is the extra step on top of `cloudflare`, `cloudflare-web-apps`, and `wrangler`. The scripts still run when those plugins are not installed.
 
 ## Check an existing app
 
@@ -45,6 +46,16 @@ The app directory. When the user does not name one, use the current directory.
 ### Return
 
 Return the app path, the check output, and the files you changed.
+
+## Release
+
+The template's `README` and `.github/workflows/release.yml` are the release steps. `deploy/branches.json` maps a branch to a Wrangler environment. The workflow runs on every push and deploys only a listed branch. Do not copy Wrangler flags, action versions, or event lists out of that workflow into this skill. Follow the `wrangler` skill for the deploy command and the `cloudflare` skill for Workers Builds. Read the current pages, and do not copy them into this skill:
+
+- https://developers.cloudflare.com/workers/ci-cd/builds/
+- https://developers.cloudflare.com/workers/ci-cd/external-cicd/github-actions/
+- https://developers.cloudflare.com/workers/vite-plugin/reference/cloudflare-environments/
+
+Run `scripts/release.sh` with `RELEASE_PLAN=1` to see the plan. Run it without that only when the user asked to deploy. Connecting the repository, creating the live D1 database, and setting CI secrets are account steps. Say so when they are not done.
 
 ## Approval
 

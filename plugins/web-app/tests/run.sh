@@ -62,13 +62,64 @@ copy_app() {
     . | tar -C "$dest" -xf -
 }
 
+pipeline_ok() {
+  app=$1
+  for file in \
+    .github/workflows/release.yml \
+    deploy/branches.json \
+    scripts/verify.sh \
+    scripts/screenshot.sh \
+    scripts/release.sh \
+    scripts/branch-env.sh \
+    scripts/notify.sh \
+    scripts/version.sh \
+    tests/ready.test.ts
+  do
+    [ -f "$app/$file" ] || return 1
+  done
+  (cd "$app" && node --test tests/ready.test.ts) || return 1
+  shim=$(mktemp -d "${TMPDIR:-/tmp}/joules-web-app-shim.XXXXXX")
+  printf '%s\n' '#!/bin/sh' 'echo called >> "$DEPLOY_LOG"' 'exit 99' > "$shim/npx"
+  cp "$shim/npx" "$shim/wrangler"
+  chmod +x "$shim/npx" "$shim/wrangler"
+  log=$(mktemp "${TMPDIR:-/tmp}/joules-web-app-deploy.XXXXXX")
+  : > "$log"
+  out=$(DEPLOY_LOG="$log" PATH="$shim:$PATH" BRANCH=not-a-mapped-branch sh "$app/scripts/release.sh") || {
+    rm -rf "$shim" "$log"
+    return 1
+  }
+  printf '%s\n' "$out" | grep -q 'skip deploy' || { rm -rf "$shim" "$log"; return 1; }
+  printf '%s\n' "$out" | grep -q 'wrangler deploy' && { rm -rf "$shim" "$log"; return 1; }
+  [ ! -s "$log" ] || { rm -rf "$shim" "$log"; return 1; }
+  out=$(DEPLOY_LOG="$log" PATH="$shim:$PATH" RELEASE_PLAN=1 BRANCH=main sh "$app/scripts/release.sh") || {
+    rm -rf "$shim" "$log"
+    return 1
+  }
+  printf '%s\n' "$out" | grep -q 'wrangler deploy' || { rm -rf "$shim" "$log"; return 1; }
+  printf '%s\n' "$out" | grep -q 'production' || { rm -rf "$shim" "$log"; return 1; }
+  [ ! -s "$log" ] || { rm -rf "$shim" "$log"; return 1; }
+  out=$(RELEASE_PLAN=1 BRANCH=staging sh "$app/scripts/release.sh") || { rm -rf "$shim" "$log"; return 1; }
+  printf '%s\n' "$out" | grep -q 'environment=staging' || { rm -rf "$shim" "$log"; return 1; }
+  if DEPLOY_WEBHOOK_URL= APP_NAME=acme BRANCH=main ENVIRONMENT=production APP_VERSION=0.1.0+abc \
+    sh "$app/scripts/notify.sh" >/dev/null 2>&1
+  then
+    rm -rf "$shim" "$log"
+    return 1
+  fi
+  printed=$(NOTIFY_PRINT=1 APP_NAME=acme BRANCH=main ENVIRONMENT=production APP_VERSION=0.1.0+abc DEPLOY_RESULT=deployed \
+    sh "$app/scripts/notify.sh") || { rm -rf "$shim" "$log"; return 1; }
+  printf '%s\n' "$printed" | grep -q '"app": "acme"' || { rm -rf "$shim" "$log"; return 1; }
+  printf '%s\n' "$printed" | grep -q 'sk-live-\|DEPLOY_WEBHOOK_URL' && { rm -rf "$shim" "$log"; return 1; }
+  rm -rf "$shim" "$log"
+}
+
 check_one() {
   name=$1
   script=$2
   work=$(mktemp -d "${TMPDIR:-/tmp}/joules-web-app.XXXXXX")
   copy_app "$work/app"
   if [ "$name" = "template" ]; then
-    if sh "$check" "$work/app" >/dev/null; then
+    if sh "$check" "$work/app" >/dev/null && pipeline_ok "$work/app"; then
       echo "ok   $name"
     else
       echo "fail $name" >&2
@@ -102,6 +153,7 @@ if [ "$mode" = "check" ]; then
     bad=0
     sh "$create" --dest "$work/app" --name acme-app --title "Acme App" >/dev/null || bad=1
     sh "$check" "$work/app" >/dev/null || bad=1
+    pipeline_ok "$work/app" || bad=1
     grep -q '"name": "acme-app"' "$work/app/package.json" || bad=1
     grep -q '"name": "acme-app"' "$work/app/package-lock.json" || bad=1
     grep -q '"database_name": "acme-app"' "$work/app/wrangler.jsonc" || bad=1
