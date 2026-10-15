@@ -1,9 +1,10 @@
 #!/bin/sh
-# Copy examples/compliant, apply one mutation, and ask /web-app to fix it.
+# Copy template/, apply one mutation, and ask /web-app to fix it.
 #
 #   tests/run.sh --check [name]
-#     Copy the example. tests/check.sh must print ok. Apply each script in
+#     Copy the template. tests/check.sh must print ok. Apply each script in
 #     tests/mutations, or the one named. The check must then fail.
+#     Also run scripts/create.sh and confirm the copy passes the check.
 #     This mode does not call grok.
 #
 #   tests/run.sh [--print] [name]
@@ -28,7 +29,8 @@ set -u
 here=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 plugin_dir=$(dirname "$here")
 plugin=$(basename "$plugin_dir")
-example="$plugin_dir/examples/compliant"
+example="$plugin_dir/template"
+create="$plugin_dir/scripts/create.sh"
 mutations="$here/mutations"
 check="$here/check.sh"
 prompt="$here/comply.txt"
@@ -65,7 +67,7 @@ check_one() {
   script=$2
   work=$(mktemp -d "${TMPDIR:-/tmp}/joules-web-app.XXXXXX")
   copy_app "$work/app"
-  if [ "$name" = "compliant" ]; then
+  if [ "$name" = "template" ]; then
     if sh "$check" "$work/app" >/dev/null; then
       echo "ok   $name"
     else
@@ -90,9 +92,32 @@ selected() {
 }
 
 if [ "$mode" = "check" ]; then
-  if selected compliant; then
+  if selected template; then
     ran=$((ran + 1))
-    check_one compliant ""
+    check_one template ""
+  fi
+  if selected create; then
+    ran=$((ran + 1))
+    work=$(mktemp -d "${TMPDIR:-/tmp}/joules-web-app.XXXXXX")
+    bad=0
+    sh "$create" --dest "$work/app" --name acme-app --title "Acme App" >/dev/null || bad=1
+    sh "$check" "$work/app" >/dev/null || bad=1
+    grep -q '"name": "acme-app"' "$work/app/package.json" || bad=1
+    grep -q '"name": "acme-app"' "$work/app/package-lock.json" || bad=1
+    grep -q '"database_name": "acme-app"' "$work/app/wrangler.jsonc" || bad=1
+    grep -q 'Acme App' "$work/app/src/routes/index.tsx" || bad=1
+    grep -q 'Acme App' "$work/app/public/manifest.webmanifest" || bad=1
+    grep -R -q -e '__APP_NAME__' -e '__APP_TITLE__' "$work/app" && bad=1
+    sh "$create" --dest "$work/app" --name acme-app --title "Acme App" >/dev/null 2>&1 && bad=1
+    sh "$create" --dest "$work/bad" --name 'Bad Name' --title "Nope" >/dev/null 2>&1 && bad=1
+    sh "$create" </dev/null >/dev/null 2>&1 && bad=1
+    if [ "$bad" = 0 ]; then
+      echo "ok   create"
+    else
+      echo "fail create" >&2
+      fail=$((fail + 1))
+    fi
+    rm -rf "$work"
   fi
   for script in "$mutations"/*.sh; do
     [ -f "$script" ] || continue
@@ -127,7 +152,7 @@ for script in "$mutations"/*.sh; do
   if [ "$mode" = "print" ]; then
     printf 'grok plugin install %s --trust\n' "$plugin_dir"
     printf 'grok plugin enable %s\n' "$plugin"
-    printf 'grok --cwd <copy of examples/compliant, mutation %s> --prompt-file %s --verbatim --always-approve --output-format json --max-turns 16 --no-subagents --disable-web-search' \
+    printf 'grok --cwd <copy of template/, mutation %s> --prompt-file %s --verbatim --always-approve --output-format json --max-turns 16 --no-subagents --disable-web-search' \
       "$name" "$prompt"
     printf '%s\n' "$denies" | while IFS= read -r deny; do
       printf " --deny '%s'" "$deny"

@@ -22,9 +22,9 @@
     },
     {
       "name": "web-app",
-      "description": "Make one TanStack Start app on Cloudflare Workers pass the web-app check.",
+      "description": "Copy the web-app template into a directory, or make an app pass the web-app check.",
       "category": "development",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "author": "Joules",
       "homepage": "https://github.com/jewell-labs/joules/tree/main/plugins/web-app",
       "keywords": ["web-app", "tanstack", "cloudflare", "solid"],

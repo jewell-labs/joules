@@ -1,5 +1,5 @@
 #!/bin/sh
-# Exit 0 when the app at $1 matches the compliant example. Print one line per failure.
+# Exit 0 when the app at $1 matches the web-app template. Print one line per failure.
 set -u
 root=${1:-}
 if [ -z "$root" ] || [ ! -d "$root" ]; then

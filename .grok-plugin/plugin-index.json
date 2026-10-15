@@ -25,12 +25,18 @@
       }
     },
     "web-app": {
-      "version": "0.1.0",
+      "version": "0.2.0",
       "components": {
         "skills": [
           {
             "name": "web-app",
-            "description": "Make one TanStack Start app on Cloudflare Workers pass the web-app check."
+            "description": "Create an app from the template, or make an app pass the web-app check."
+          }
+        ],
+        "commands": [
+          {
+            "name": "create",
+            "description": "Copy the web-app template into a directory."
           }
         ]
       }

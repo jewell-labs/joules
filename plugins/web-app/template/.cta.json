@@ -1,5 +1,5 @@
 {
-  "projectName": "compliant",
+  "projectName": "__APP_NAME__",
   "mode": "file-router",
   "typescript": true,
   "tailwind": false,
