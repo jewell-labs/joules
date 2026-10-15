@@ -1,8 +1,8 @@
 #!/bin/sh
 # One prompt: "create a web app".
 #
-# The agent must ask for the destination directory, the package name, and the
-# title before it writes the app. This script is the oracle. It is not a second
+# The agent must ask the three lines in commands/create.md, and it must not run
+# a shell command or write a file, before this script answers. This script is the oracle. It is not a second
 # Grok session, and it does not invent answers. It resumes the same session
 # with the fixed answers below, then checks the directory the script created.
 # grok flags live in with_flags.
@@ -178,10 +178,9 @@ fi
 session=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("sessionId") or "")' "$log/ask.json")
 [ -n "$session" ] || fail "ask session"
 
-python3 - "$session" "$log/ask.txt" "$work" <<'PY' || fail "questions"
-import glob, json, os, re, shlex, sys
-session, log_path, work = sys.argv[1:]
-work = os.path.realpath(work)
+python3 - "$session" "$log/ask.txt" <<'PY' || fail "questions"
+import glob, json, os, re, sys
+session, log_path = sys.argv[1:]
 matches = glob.glob(os.path.expanduser("~/.grok/sessions/*/%s/chat_history.jsonl" % session))
 if not matches:
     sys.stderr.write("no transcript\n")
@@ -199,109 +198,26 @@ def text_of(content):
             parts.append(block)
     return "\n".join(parts)
 
-home = os.path.expanduser("~")
+required = (
+    "Where should the app go?",
+    "What is the package name?",
+    "What is the title?",
+)
 
-def expand_user(path):
-    path = path.replace("${HOME}", home).replace("$HOME", home)
-    if path == "~" or path.startswith("~/"):
-        path = home + path[1:]
-    return path
+def negated(line):
+    return re.search(r"\b(?:not|never)\b|n't", line, re.I) is not None
 
-def inside(path):
-    if not path or path.startswith("-") or path.startswith("&"):
-        return True
-    path = expand_user(path)
-    abs_path = path if os.path.isabs(path) else os.path.join(work, path)
-    try:
-        abs_path = os.path.realpath(abs_path)
-    except OSError:
+def changes_files(name):
+    low = name.lower()
+    if low in {"todo_write"}:
         return False
-    return abs_path == work or abs_path.startswith(work + os.sep)
+    if low in {"run_terminal_command", "bash", "search_replace"}:
+        return True
+    return any(part in low for part in ("write", "edit", "delete", "patch", "remove", "rename", "move", "copy", "replace"))
 
-def interpreter_outside(argv):
-    code = None
-    for index, arg in enumerate(argv):
-        if arg in ("-c", "-e") and index + 1 < len(argv):
-            code = argv[index + 1]
-            break
-    if not code:
-        return []
-    writes = re.search(r"writeFile|write_text|appendFile", code) or re.search(
-        r"open\s*\([^)]*['\"][wax+][wax+b]*['\"]", code
-    )
-    if not writes:
-        return []
-    hits = []
-    for found in re.findall(r"(?:~|\$\{HOME\}|\$HOME|/)[^\s'\"`,)]*", code):
-        if not inside(found):
-            hits.append(found)
-    return hits
-
-def shell_outside(command):
-    hits = []
-    for match in re.finditer(r"(?:^|[\s;|&])(\d*)>>?\s*([^\s;&|]+)", command):
-        path = match.group(2)
-        if len(path) >= 2 and path[0] == path[-1] and path[0] in "\"'":
-            path = path[1:-1]
-        if path.startswith("&"):
-            continue
-        if not inside(path):
-            hits.append(path)
-    try:
-        parts = shlex.split(command)
-    except ValueError:
-        parts = command.split()
-    bins = {"cp", "mv", "rsync", "install", "ln", "tee", "mkdir", "touch", "rm"}
-    interpreters = {"python", "python3", "node", "nodejs", "ruby", "perl"}
-    i = 0
-    while i < len(parts):
-        tok = parts[i]
-        if tok in ("&&", "||", ";", "|"):
-            i += 1
-            continue
-        base = os.path.basename(tok)
-        if tok in bins or base in bins:
-            args = []
-            i += 1
-            while i < len(parts) and parts[i] not in ("&&", "||", ";", "|"):
-                if not parts[i].startswith("-"):
-                    args.append(parts[i])
-                i += 1
-            if args and not inside(args[-1]):
-                hits.append(args[-1])
-            continue
-        if base in interpreters:
-            argv = [tok]
-            i += 1
-            while i < len(parts) and parts[i] not in ("&&", "||", ";", "|"):
-                argv.append(parts[i])
-                i += 1
-            hits.extend(interpreter_outside(argv))
-            continue
-        if base == "tar" or tok == "tar":
-            i += 1
-            argv = [tok]
-            while i < len(parts) and parts[i] not in ("&&", "||", ";", "|"):
-                argv.append(parts[i])
-                i += 1
-            def extracts_tar(arg):
-                if arg.startswith("--"):
-                    return arg in ("--extract", "--get")
-                body = arg[1:] if arg.startswith("-") else arg
-                return bool(body) and "x" in body and body.isalpha()
-            extracts = any(extracts_tar(arg) for arg in argv[1:])
-            if extracts and "-C" in argv:
-                c_at = argv.index("-C")
-                if c_at + 1 < len(argv) and not inside(argv[c_at + 1]):
-                    hits.append(argv[c_at + 1])
-            continue
-        i += 1
-    return hits
-
-labels = ("destination", "package name", "title")
 replies = []
 early = False
-outside = []
+mutated = []
 for line in open(chat):
     event = json.loads(line)
     if event.get("type") != "assistant":
@@ -311,74 +227,29 @@ for line in open(chat):
         name = call.get("name") or ""
         args = call.get("arguments")
         if not isinstance(args, str):
-            args = json.dumps(args)
+            args = json.dumps(args) if args is not None else ""
         if args and "create.sh" in args and "--dest" in args:
             early = True
-        parsed = None
-        try:
-            parsed = json.loads(args) if args else None
-        except json.JSONDecodeError:
-            parsed = None
-        if name == "run_terminal_command" or (isinstance(parsed, dict) and isinstance(parsed.get("command"), str)):
-            command = parsed.get("command") if isinstance(parsed, dict) else args
-            outside.extend(shell_outside(command or ""))
-            continue
-        if name.lower() == "todo_write":
-            continue
-        if any(part in name.lower() for part in ("write", "edit", "delete", "patch", "remove", "rename", "move", "copy")):
-            strings = []
-            def walk(value, out):
-                if isinstance(value, str):
-                    out.append(value)
-                elif isinstance(value, dict):
-                    for item in value.values():
-                        walk(item, out)
-                elif isinstance(value, list):
-                    for item in value:
-                        walk(item, out)
-            walk(parsed if parsed is not None else args, strings)
-            for item in strings:
-                if item.startswith("/") and not inside(item):
-                    outside.append(item)
+        if changes_files(name):
+            mutated.append(name or "tool")
 
 open(log_path, "w").write("\n".join(replies))
 if early:
     sys.stderr.write("create.sh ran before the oracle answered\n")
     sys.exit(1)
-if outside:
-    sys.stderr.write("wrote outside the sandbox: %s\n" % ", ".join(outside))
+if mutated:
+    sys.stderr.write("shell or file change before the questions were answered: %s\n" % ", ".join(mutated))
     sys.exit(1)
-
-def negated(line):
-    return re.search(r"\b(?:not|never)\b|n't", line, re.I) is not None
-
-def question_line(line):
-    return "?" in line
-
-def asked_labels(line):
-    low = line.lower()
-    hits = []
-    if (
-        "destination" in low
-        or re.search(r"\bwhere\b.*\bgo\b", low)
-        or re.search(r"\b(?:which|what)\b.*\b(?:directory|folder|path)\b", low)
-    ):
-        hits.append("destination")
-    if "package name" in low or re.search(r"\bpackage\b", low):
-        hits.append("package name")
-    if re.search(r"\btitle\b", low):
-        hits.append("title")
-    return hits
 
 found = set()
 for reply in replies:
     for line in reply.splitlines():
-        if negated(line) or not question_line(line):
+        if negated(line):
             continue
-        hits = asked_labels(line)
+        hits = [question for question in required if question in line]
         if len(hits) == 1:
             found.add(hits[0])
-missing = [label for label in labels if label not in found]
+missing = [question for question in required if question not in found]
 if missing:
     sys.stderr.write("missing questions: %s\n" % ", ".join(missing))
     sys.exit(1)

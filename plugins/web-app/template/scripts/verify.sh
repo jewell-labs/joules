@@ -34,6 +34,26 @@ if grep -q 'react-start' wrangler.jsonc || grep -q 'react-start' src/server.ts; 
   echo "server entry is the React one" >&2
   exit 1
 fi
+if ! grep -q 'lang="en"' src/routes/__root.tsx || ! grep -q 'viewport' src/routes/__root.tsx; then
+  echo "document is missing its language or viewport" >&2
+  exit 1
+fi
+if ! grep -q 'Cache-Control' src/routes/__root.tsx || ! grep -q 'private, no-store' src/routes/__root.tsx; then
+  echo "document is cacheable" >&2
+  exit 1
+fi
+if ! grep -q "mode !== 'navigate'" public/sw.js; then
+  echo "service worker handles more than navigations" >&2
+  exit 1
+fi
+if ! grep -q "'/offline'" public/sw.js || grep -q '/offline.html' public/sw.js; then
+  echo "service worker caches the redirected offline url" >&2
+  exit 1
+fi
+if grep -R -I -q -E 'drizzle|cloudflare:workers|McpServer|agents/mcp|healthcheck' dist/client; then
+  echo "client bundle contains server code" >&2
+  exit 1
+fi
 
 # Pieces stay split so this file does not contain the needles it searches for.
 pat=$(printf '%s%s|%s%s|%s%s|%s|%s %s' \

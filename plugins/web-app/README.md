@@ -18,4 +18,12 @@ plugins/web-app/scripts/create.sh --dest PATH --name NAME --title TITLE
 
 ## Tests
 
-`tests/run.sh` sends the prompt `create a web app`. The run fails if the agent writes the app before it has asked for the destination directory, the package name, and the title. A fixed oracle then answers those, in the same session, and the agent runs `scripts/create.sh`. The script checks the created directory. Logs go under `tests/logs/`.
+`tests/run.sh` sends the prompt `create a web app`. The run fails unless the agent asks these lines, and no others mixed onto them, before it runs a shell command or writes a file:
+
+```text
+Where should the app go?
+What is the package name?
+What is the title?
+```
+
+A fixed oracle then answers those, in the same session, and the agent runs `scripts/create.sh`. The script checks the created directory. Logs go under `tests/logs/`.

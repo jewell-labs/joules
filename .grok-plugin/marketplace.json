@@ -24,7 +24,7 @@
       "name": "web-app",
       "description": "Copy the web-app template into a directory. The copy is TanStack Start on Cloudflare Workers, releases listed branches, and serves one public HTTP healthcheck.",
       "category": "development",
-      "version": "0.4.0",
+      "version": "0.4.1",
       "author": "Joules",
       "homepage": "https://github.com/jewell-labs/joules/tree/main/plugins/web-app",
       "keywords": ["web-app", "tanstack", "cloudflare", "solid", "mcp"],

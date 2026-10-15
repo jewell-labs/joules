@@ -31,7 +31,7 @@ find_chrome() {
 show_commands() {
   browser=${1:-<chrome>}
   echo "screenshot command: $browser --headless=new --disable-gpu --no-sandbox --window-size=1280,720 --screenshot=$home_png $base/" >&2
-  echo "screenshot command: $browser --headless=new --disable-gpu --no-sandbox --window-size=1280,720 --screenshot=$offline_png $base/offline.html" >&2
+  echo "screenshot command: $browser --headless=new --disable-gpu --no-sandbox --window-size=1280,720 --screenshot=$offline_png $base/offline" >&2
 }
 
 if [ ! -f dist/client/offline.html ]; then
@@ -97,5 +97,5 @@ shot() {
     "$url"
 }
 shot "$base/" "$home_png"
-shot "$base/offline.html" "$offline_png"
+shot "$base/offline" "$offline_png"
 [ -s "$home_png" ] && [ -s "$offline_png" ]

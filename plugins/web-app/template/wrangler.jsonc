@@ -1,11 +1,12 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "__APP_NAME__",
-  "compatibility_date": "2026-10-14",
+  "compatibility_date": "2026-10-15",
   "compatibility_flags": [
     "nodejs_compat"
   ],
   "main": "src/server.ts",
+  "upload_source_maps": true,
   "observability": {
     "enabled": true
   },

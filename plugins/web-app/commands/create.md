@@ -11,6 +11,6 @@ Where should the app go?
 What is the package name?
 What is the title?
 
-Do not guess them, do not write the app, and do not run the script until each answer is in the conversation. Pass the answers as `--dest`, `--name`, and `--title`. The script copies `template/` and fills those answers in. The copy includes the release workflow and the worker's public HTTP healthcheck. Branch names and Wrangler commands stay in the copy's `README`, not in this command.
+Do not guess them, do not write the app, and do not run a shell command until each answer is in the conversation. Pass the answers as `--dest`, `--name`, and `--title`. The script copies `template/` and fills those answers in. The copy includes the release workflow and the worker's public HTTP healthcheck. Branch names and Wrangler commands stay in the copy's `README`, not in this command.
 
 Do not install, deploy, push, or spend unless the user asked. Return the destination path the script prints.

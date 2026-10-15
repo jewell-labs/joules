@@ -32,7 +32,7 @@ Where should the app go?
 What is the package name?
 What is the title?
 
-Do not guess them, do not write the app, and do not run `scripts/create.sh` until the user has answered each one.
+Do not guess them, do not write the app, and do not run a shell command until the user has answered each one.
 
 ## Healthcheck
 
