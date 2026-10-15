@@ -10,7 +10,7 @@ Then run `/joules-plugins` with `create`, `evaluate`, `update`, or `score`. On t
 
 ## Last test run
 
-`tests/run.sh` rewrites the table below after each prompt. A number is the rubric points that prompt proved. `-` means this prompt does not score that row. Usage is uncached input tokens, output tokens, turns, and cost when the headless JSON reported them.
+`tests/run.sh` rewrites the table below after each prompt in `tests/cases/`. A number is the rubric points that prompt proved. `-` means this prompt does not score that row. Usage is uncached input tokens, output tokens, turns, and cost when the headless JSON reported them.
 
 <!-- joules-test-status:start -->
 | Prompt | When | Result | Load | Job | Procedure | Future-proof | Catalog | Safety | Components | Hosts | Behavior | Usage |

@@ -12,16 +12,21 @@
 #     --deny 'Bash(git push*)' \
 #     --deny 'Bash(curl*)' --deny 'Bash(wget*)'
 #
-# The sandbox is a copy of tests/fixtures/market, so the session cannot
-# write the Joules checkout. Pass joules-plugins/evaluating,
-# joules-plugins/negative, or no argument for both. --print shows the command.
+# The sandbox is a copy of fixtures/market beside this script, so the
+# session cannot write the Joules checkout. Cases are cases/<name>.txt.
+# Pass a case name, or no argument for every case. --print shows the command.
 # After a case, the script prints the RUBRIC.md rows it can prove. The
 # other rows are not scored.
 
 set -u
 
-root=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
-fixture="$root/tests/fixtures/market"
+here=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
+plugin_dir=$(dirname "$here")
+plugin=$(basename "$plugin_dir")
+root=$(dirname "$(dirname "$plugin_dir")")
+fixture="$here/fixtures/market"
+cases="$here/cases"
+readme="$plugin_dir/README.md"
 print_only=0
 if [ "${1:-}" = "--print" ]; then
   print_only=1
@@ -43,7 +48,7 @@ clean_tree() {
 
 
 
-rubric="$root/plugins/joules-plugins/skills/joules-plugins/RUBRIC.md"
+rubric="$plugin_dir/skills/$plugin/RUBRIC.md"
 row_names="Load Job Procedure Future-proof Catalog Safety Components Hosts Behavior"
 bad=0
 
@@ -112,11 +117,11 @@ record_status() {
   result=$2
   usage=$3
   when=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-  python3 - "$readme" "$kind" "$result" "$when" "$usage" "$log/rows.tsv" <<'PY'
-import sys
-path, kind, result, when, usage, rows_path = sys.argv[1:]
+  python3 - "$readme" "$kind" "$result" "$when" "$usage" "$log/rows.tsv" "$cases" <<'PY'
+import os, sys
+path, kind, result, when, usage, rows_path, cases_dir = sys.argv[1:]
 order = ["Load", "Job", "Procedure", "Future-proof", "Catalog", "Safety", "Components", "Hosts", "Behavior"]
-kinds = ["evaluating", "negative"]
+kinds = sorted(name[:-4] for name in os.listdir(cases_dir) if name.endswith(".txt"))
 scores = {name: "-" for name in order}
 try:
     for line in open(rows_path):
@@ -162,16 +167,14 @@ PY
 }
 
 run_one() {
-  plugin=$1
-  kind=$2
-  prompt="$root/tests/cases/$plugin/$kind/prompt.txt"
+  kind=$1
+  prompt="$cases/$kind.txt"
   [ -f "$prompt" ] || {
     echo "missing $prompt" >&2
     fail=$((fail + 1))
     return
   }
   ran=$((ran + 1))
-  readme="$root/plugins/$plugin/README.md"
   work=$(mktemp -d "${TMPDIR:-/tmp}/joules-plugin-test.XXXXXX")
   log=$(mktemp -d "${TMPDIR:-/tmp}/joules-plugin-log.XXXXXX")
   cp -R "$fixture/." "$work/"
@@ -257,16 +260,17 @@ PY
   fi
 }
 
-for kind in evaluating negative; do
-  id="joules-plugins/$kind"
+for prompt in "$cases"/*.txt; do
+  [ -f "$prompt" ] || continue
+  kind=$(basename "$prompt" .txt)
   case "$want" in
-    "" | joules-plugins | "$id") run_one joules-plugins "$kind" ;;
+    "" | "$kind" | "$plugin" | "$plugin/$kind") run_one "$kind" ;;
   esac
 done
 
 if [ "$ran" = 0 ]; then
   echo "no case matched: ${want:-all}" >&2
-  echo "usage: tests/run.sh [--print] [plugin | plugin/kind]" >&2
+  echo "usage: plugins/<name>/tests/run.sh [--print] [case]" >&2
   exit 1
 fi
 
