@@ -1,0 +1,13 @@
+/create-plugin hello-note
+
+Create one plugin at plugins/hello-note. Its only job is a skill that tells the agent to reply with the single word hello.
+
+Do only this:
+- add plugins/hello-note with a manifest, a README, and skills/hello-note/SKILL.md
+- register it in .grok-plugin/marketplace.json and .grok-plugin/plugin-index.json
+- run grok plugin validate on plugins/hello-note
+
+Do not install, publish, tag, or push. Do not edit any other plugin. Do not run grok plugin install or grok plugin marketplace. Do not put a secret in any file.
+
+End with exactly one line and nothing after it:
+RESULT: pass

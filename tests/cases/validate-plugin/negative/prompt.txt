@@ -1,0 +1,6 @@
+/validate-plugin plugins/not-a-plugin
+
+This path is not a plugin. Report the result. Do not create or edit any file. Do not install, publish, tag, or push.
+
+End with exactly one line:
+RESULT: fail

@@ -1,0 +1,43 @@
+{
+  "name": "fixture",
+  "description": "Tiny marketplace used by the Joules plugin tests.",
+  "owner": { "name": "Joules" },
+  "plugins": [
+    {
+      "name": "sample-note",
+      "description": "Reply with the single word hello.",
+      "category": "development",
+      "version": "0.0.1",
+      "author": "Joules",
+      "homepage": "https://example.com/sample-note",
+      "keywords": ["sample-note"],
+      "domains": [],
+      "tags": ["plugins"],
+      "source": { "type": "local", "path": "./plugins/sample-note" }
+    },
+    {
+      "name": "needs-readme",
+      "description": "Reply with the single word hello. The README is absent on purpose.",
+      "category": "development",
+      "version": "0.0.1",
+      "author": "Joules",
+      "homepage": "https://example.com/needs-readme",
+      "keywords": ["needs-readme"],
+      "domains": [],
+      "tags": ["plugins"],
+      "source": { "type": "local", "path": "./plugins/needs-readme" }
+    },
+    {
+      "name": "frozen-model",
+      "description": "A plugin that states a model id as its contract.",
+      "category": "development",
+      "version": "0.0.1",
+      "author": "Joules",
+      "homepage": "https://example.com/frozen-model",
+      "keywords": ["frozen-model"],
+      "domains": [],
+      "tags": ["plugins"],
+      "source": { "type": "local", "path": "./plugins/frozen-model" }
+    }
+  ]
+}

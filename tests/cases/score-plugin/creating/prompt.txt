@@ -1,0 +1,6 @@
+/score-plugin plugins/sample-note
+
+Score the plugin. Write only SCORE.txt in the repository root. That file contains one line, TOTAL: <n>, where n is an integer from 0 to 100. Do not edit the plugin. Do not install, publish, tag, or push.
+
+End with exactly one line:
+RESULT: pass

@@ -23,7 +23,7 @@ grok plugin install score-plugin --trust
 
 ## Add a plugin
 
-Search the official catalog first. Then `/create-plugin`, `/validate-plugin`, and `/score-plugin`. `grok plugin validate plugins/<name>` is the manifest check. After you ask to install, `grok inspect` and `/<skill>` on a safe input are the behavior check.
+Search the official catalog first. Then `/create-plugin`, `/validate-plugin`, and `/score-plugin`. `grok plugin validate plugins/<name>` is the manifest check. After you ask to install, `grok inspect` and `/<skill>` on a safe input are the behavior check. `tests/run.sh` runs that behavior check headless: three cases per plugin (creating, evaluating, negative).
 
 From this checkout, follow `AGENTS.md`.
 

@@ -1,0 +1,6 @@
+/score-plugin plugins/frozen-model
+
+Score the plugin. Do not create or edit any file. Do not install, publish, tag, or push. Its skill states a model id as the contract, so Future-proof is 0.
+
+End with exactly one line:
+RESULT: fail

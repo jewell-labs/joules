@@ -1,0 +1,9 @@
+{
+  "name": "needs-readme",
+  "version": "0.0.1",
+  "description": "Reply with the single word hello. The README is absent on purpose.",
+  "author": { "name": "Joules" },
+  "license": "MIT",
+  "keywords": ["needs-readme"],
+  "homepage": "https://example.com/needs-readme"
+}

@@ -1,0 +1,6 @@
+/validate-plugin plugins/needs-readme
+
+The README is missing. Create plugins/needs-readme/README.md and no other file, then run grok plugin validate on that directory. The README states the MIT license, that the plugin makes no network call, and that it takes no credential. Do not install, publish, tag, or push.
+
+When that README exists and validate exits 0, end with exactly one line:
+RESULT: pass
