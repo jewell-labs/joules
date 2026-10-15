@@ -1,6 +1,6 @@
 {
   "name": "score-plugin",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Score a Grok plugin from 0 to 100 against the current docs.",
   "author": {
     "name": "Joules",

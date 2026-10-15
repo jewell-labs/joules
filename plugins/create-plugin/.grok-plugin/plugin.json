@@ -1,6 +1,6 @@
 {
   "name": "create-plugin",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Create one Grok plugin for one job. Reads the current docs before it writes a file.",
   "author": {
     "name": "Joules",

@@ -1,6 +1,6 @@
 {
   "name": "validate-plugin",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Validate a Grok plugin against the current docs and grok plugin validate.",
   "author": {
     "name": "Joules",

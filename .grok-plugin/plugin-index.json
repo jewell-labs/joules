@@ -2,7 +2,7 @@
   "version": 1,
   "plugins": {
     "create-plugin": {
-      "version": "0.2.0",
+      "version": "0.3.0",
       "components": {
         "skills": [
           {
@@ -15,11 +15,17 @@
             "name": "joules-docs",
             "description": "Living docs MCP"
           }
+        ],
+        "hooks": [
+          {
+            "name": "SessionStart",
+            "description": "new|load"
+          }
         ]
       }
     },
     "validate-plugin": {
-      "version": "0.2.0",
+      "version": "0.3.0",
       "components": {
         "skills": [
           {
@@ -32,11 +38,17 @@
             "name": "joules-docs",
             "description": "Living docs MCP"
           }
+        ],
+        "hooks": [
+          {
+            "name": "SessionStart",
+            "description": "new|load"
+          }
         ]
       }
     },
     "score-plugin": {
-      "version": "0.2.0",
+      "version": "0.3.0",
       "components": {
         "skills": [
           {
@@ -48,6 +60,12 @@
           {
             "name": "joules-docs",
             "description": "Living docs MCP"
+          }
+        ],
+        "hooks": [
+          {
+            "name": "SessionStart",
+            "description": "new|load"
           }
         ]
       }

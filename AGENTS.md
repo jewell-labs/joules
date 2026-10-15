@@ -12,12 +12,11 @@ The catalog is https://github.com/xai-org/plugin-marketplace `.grok-plugin/marke
 
 ### Set up
 
-1. Run `grok plugin marketplace list`.
-2. When `https://github.com/xai-org/plugin-marketplace.git` is missing, run `grok plugin marketplace add https://github.com/xai-org/plugin-marketplace.git`.
-3. Run `grok plugin marketplace update` so the local cache matches that repo.
-4. Fetch the catalog file above. Match the task against each entry's name, keywords, domains, and description.
-5. For every match, run `grok plugin install <name> --trust`, then `grok plugin enable <name>` when `grok plugin list` shows it disabled.
-6. Open that plugin's `README` and `SKILL.md` from the path `grok plugin list` prints. When it ships an MCP server, run `grok mcp doctor` for that server and finish the sign-in the README describes. Ask the user when a credential is required.
+1. A trusted Joules plugin does this on `SessionStart`. It reads `hooks/marketplaces.txt` and `hooks/plugins.txt` beside its hook, adds each marketplace URL, installs each plugin with `--trust`, and enables it. The same files are in every Joules plugin. Keep those copies identical.
+2. When that hook has not run, do the same commands yourself. Then run `grok plugin marketplace update`.
+3. Fetch the catalog file above. Match the task against each entry's name, keywords, domains, and description.
+4. For every match, run `grok plugin install <name> --trust`, then `grok plugin enable <name>` when `grok plugin list` shows it disabled.
+5. Open that plugin's `README` and `SKILL.md` from the path `grok plugin list` prints. When it ships an MCP server, run `grok mcp doctor` for that server and finish the sign-in the README describes. Ask the user when a credential is required.
 
 Leave catalog plugins that do not match this task uninstalled.
 

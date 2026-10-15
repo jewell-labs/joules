@@ -2,7 +2,7 @@
 
 Public catalog of Grok plugins. This repository is the source of truth. Add a plugin here, push `main`, and installed copies update on the next Grok session or with `grok plugin update`.
 
-Agents working in this repo follow [AGENTS.md](AGENTS.md). That file makes the official marketplace, <https://github.com/xai-org/plugin-marketplace>, the first place to look. Install and use a plugin from that catalog when it already does the job. Plugin contracts that can change stay on the current docs at <https://docs.x.ai/llms.txt>.
+Agents working in this repo follow [AGENTS.md](AGENTS.md). Installing any Joules plugin adds the marketplace URLs in `hooks/marketplaces.txt` and installs the plugins named in `hooks/plugins.txt`. That list starts with the xAI Official marketplace and the Cloudflare marketplace. Plugin contracts that can change stay on the current docs at <https://docs.x.ai/llms.txt>.
 
 ## Install
 
