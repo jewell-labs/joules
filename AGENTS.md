@@ -85,7 +85,7 @@ If the current page for a host does not yet say how this marketplace installs th
 
 ## Catalog
 
-- One plugin you author does one job, at `plugins/<name>/`. This repo ships `joules-plugins` for authoring and `web-app` for a new app from its template. On an existing copy, that skill runs the app's `npm test` and `scripts/verify.sh`.
+- One plugin you author does one job, at `plugins/<name>/`. This repo ships `joules-plugins` for authoring and `web-app` for a new app. A new app follows that plugin's plan, create, and validate commands.
 - List it in `.grok-plugin/marketplace.json`. Match the fields already in that file.
 - When `.grok-plugin/plugin-index.json` exists, list the components you actually added.
 - A plugin that lives in this repo uses a local source path.

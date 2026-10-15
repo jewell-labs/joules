@@ -1,7 +1,7 @@
 {
   "name": "web-app",
-  "version": "0.4.3",
-  "description": "Copy the web-app template into a directory. The copy is TanStack Start on Cloudflare Workers, releases listed branches, and serves one public HTTP healthcheck.",
+  "version": "0.6.0",
+  "description": "Create a Void pages app on Cloudflare Workers. The app releases the branches it lists and serves one public HTTP healthcheck.",
   "author": {
     "name": "Joules",
     "url": "https://github.com/jewell-labs/joules"
@@ -9,5 +9,5 @@
   "homepage": "https://github.com/jewell-labs/joules/tree/main/plugins/web-app",
   "repository": "https://github.com/jewell-labs/joules",
   "license": "MIT",
-  "keywords": ["web-app", "tanstack", "cloudflare", "solid", "mcp"]
+  "keywords": ["web-app", "void", "cloudflare", "solid", "mcp"]
 }

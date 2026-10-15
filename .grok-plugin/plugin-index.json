@@ -25,18 +25,34 @@
       }
     },
     "web-app": {
-      "version": "0.4.3",
+      "version": "0.6.0",
       "components": {
         "skills": [
           {
             "name": "web-app",
-            "description": "Create an app from the template. The copy releases listed branches and serves one public HTTP healthcheck."
+            "description": "Create a Void pages app. The app releases listed branches and serves one public HTTP healthcheck."
+          },
+          {
+            "name": "plan",
+            "description": "Map a web app request onto create.sh flags from --help."
           }
         ],
         "commands": [
           {
+            "name": "plan",
+            "description": "Map a web app request onto create.sh flags, or ask one unknown."
+          },
+          {
             "name": "create",
-            "description": "Copy the web-app template into a directory."
+            "description": "Create a Void pages app from a plan argv."
+          },
+          {
+            "name": "validate",
+            "description": "Run the app checks for each mapped branch."
+          },
+          {
+            "name": "evaluate",
+            "description": "Score the README prompt and write the table."
           }
         ]
       }
