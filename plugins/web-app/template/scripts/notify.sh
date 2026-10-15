@@ -37,12 +37,26 @@ if not url:
 if not url.startswith("https://"):
     sys.stderr.write("webhook not sent: DEPLOY_WEBHOOK_URL must be https\n")
     sys.exit(1)
-parts = urlsplit(url)
-# user:secret@host becomes a port in urllib errors and is not masked as the whole secret.
-if parts.username is not None or parts.password is not None or "@" in parts.netloc:
+# urlsplit's ValueError text includes the netloc. Log the type only.
+try:
+    parts = urlsplit(url)
+    has_userinfo = (
+        parts.username is not None
+        or parts.password is not None
+        or "@" in (parts.netloc or "")
+    )
+    host = parts.hostname
+    port = parts.port or 443
+    path = parts.path or "/"
+    if parts.query:
+        path = path + "?" + parts.query
+except Exception as exc:
+    sys.stderr.write("webhook not sent: " + type(exc).__name__ + "\n")
+    sys.exit(1)
+if has_userinfo:
     sys.stderr.write("webhook not sent: DEPLOY_WEBHOOK_URL must not contain userinfo\n")
     sys.exit(1)
-if not parts.hostname:
+if not host:
     sys.stderr.write("webhook not sent: DEPLOY_WEBHOOK_URL must be https\n")
     sys.exit(1)
 
@@ -51,15 +65,12 @@ if os.environ.get("NOTIFY_PRINT") == "1":
     sys.stdout.write("\n")
     sys.exit(0)
 
-path = parts.path or "/"
-if parts.query:
-    path = path + "?" + parts.query
 body = json.dumps(payload).encode()
 status = 0
 conn = None
 try:
     # http.client does not follow redirects. urlopen would retry a 302 as a GET, including to http.
-    conn = http.client.HTTPSConnection(parts.hostname, parts.port or 443, timeout=30)
+    conn = http.client.HTTPSConnection(host, port, timeout=30)
     conn.request(
         "POST",
         path,

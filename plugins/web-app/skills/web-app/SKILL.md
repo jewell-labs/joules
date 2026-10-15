@@ -55,7 +55,7 @@ The template's `README` and `.github/workflows/release.yml` are the release step
 - https://developers.cloudflare.com/workers/ci-cd/external-cicd/github-actions/
 - https://developers.cloudflare.com/workers/vite-plugin/reference/cloudflare-environments/
 
-Run `scripts/release.sh` with `RELEASE_PLAN=1` to see the plan. Run it without that only when the user asked to deploy. Connecting the repository, creating each environment's live D1 database, and setting CI secrets are account steps. Say so when they are not done.
+Run `scripts/release.sh` with `RELEASE_PLAN=1` to see the plan. Run it without that only when the user asked to deploy. Connecting the repository, creating each environment's live D1 database, and creating the GitHub Environment the template README names are account steps. The workflow file does not limit that environment's deployment branches. Say so when they are not done.
 
 ## Approval
 

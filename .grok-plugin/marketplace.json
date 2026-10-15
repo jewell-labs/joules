@@ -24,7 +24,7 @@
       "name": "web-app",
       "description": "Copy the web-app template into a directory, or make an app pass the web-app check. The template releases listed branches.",
       "category": "development",
-      "version": "0.3.0",
+      "version": "0.3.1",
       "author": "Joules",
       "homepage": "https://github.com/jewell-labs/joules/tree/main/plugins/web-app",
       "keywords": ["web-app", "tanstack", "cloudflare", "solid"],

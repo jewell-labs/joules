@@ -65,6 +65,8 @@ grep -q 'persist-credentials: false' "$root/.github/workflows/release.yml" || sa
 grep -q 'contents: read' "$root/.github/workflows/release.yml" || say "workflow permissions are not contents: read"
 grep -q 'concurrency:' "$root/.github/workflows/release.yml" || say "workflow has no concurrency group"
 grep -q 'skip deploy' "$root/.github/workflows/release.yml" || say "unlisted branch has no skip step"
+grep -q 'environment: release' "$root/.github/workflows/release.yml" || say "deploy jobs do not reference the GitHub Environment"
+[ "$(grep -c 'environment: release' "$root/.github/workflows/release.yml")" -ge 2 ] || say "deploy and notify do not each reference the GitHub Environment"
 grep -q '"deploy": "sh scripts/release.sh"' "$root/package.json" || say "npm run deploy skips the branch map"
 grep -q 'branch not in data' "$root/scripts/branch-env.sh" || say "a listed branch with a bad environment can skip"
 grep -q 'version##\*+' "$root/scripts/release.sh" || say "deploy tag does not use the last plus"

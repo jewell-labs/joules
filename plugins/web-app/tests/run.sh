@@ -100,6 +100,40 @@ pipeline_ok() {
   [ ! -s "$log" ] || { rm -rf "$shim" "$log"; return 1; }
   out=$(RELEASE_PLAN=1 BRANCH=staging sh "$app/scripts/release.sh") || { rm -rf "$shim" "$log"; return 1; }
   printf '%s\n' "$out" | grep -q 'environment=staging' || { rm -rf "$shim" "$log"; return 1; }
+  python3 - "$app/.github/workflows/release.yml" <<'PY' || { rm -rf "$shim" "$log"; return 1; }
+import re, sys
+text = open(sys.argv[1], encoding="utf-8").read()
+parts = re.split(r"(?m)^(?=  [A-Za-z0-9_-]+:\s*$)", text)
+jobs = {}
+for part in parts:
+    match = re.match(r"  ([A-Za-z0-9_-]+):\s*\n", part)
+    if match:
+        jobs[match.group(1)] = part
+
+def job_of(needle):
+    owners = [name for name, body in jobs.items() if needle in body]
+    if len(owners) != 1:
+        sys.exit(1)
+    return jobs[owners[0]]
+
+check = job_of("scripts/release.sh check")
+deploy = job_of("scripts/release.sh deploy")
+notify = job_of("scripts/release.sh notify")
+if "CLOUDFLARE_API_TOKEN" in check or "DEPLOY_WEBHOOK_URL" in check:
+    sys.exit(1)
+if "environment:" in check:
+    sys.exit(1)
+if "DEPLOY_WEBHOOK_URL" in deploy or "environment: release" not in deploy:
+    sys.exit(1)
+if "CLOUDFLARE_API_TOKEN" in notify or "environment: release" not in notify:
+    sys.exit(1)
+PY
+  : > "$log"
+  deploy_status=0
+  deploy_out=$(DEPLOY_LOG="$log" PATH="$shim:$PATH" BRANCH=main sh "$app/scripts/release.sh" deploy 2>&1) || deploy_status=$?
+  [ "$deploy_status" != 0 ] || { rm -rf "$shim" "$log"; return 1; }
+  printf '%s\n' "$deploy_out" | grep -q 'skip deploy' && { rm -rf "$shim" "$log"; return 1; }
+  [ ! -s "$log" ] || { rm -rf "$shim" "$log"; return 1; }
   if sh "$app/scripts/verify.sh" --built >/dev/null 2>&1; then
     rm -rf "$shim" "$log"
     return 1
@@ -108,6 +142,40 @@ pipeline_ok() {
   cp "$app/public/manifest.webmanifest" "$app/public/offline.html" "$app/public/sw.js" "$app/dist/client/"
   built=$(sh "$app/scripts/verify.sh" --built) || { rm -rf "$shim" "$log"; return 1; }
   printf '%s\n' "$built" | grep -q '^ok$' || { rm -rf "$shim" "$log"; return 1; }
+  printf '%s\n' 'rk_live_abc' > "$app/public/leak.txt"
+  verify_status=0
+  verify_out=$(sh "$app/scripts/verify.sh" --built 2>&1) || verify_status=$?
+  rm -f "$app/public/leak.txt"
+  [ "$verify_status" != 0 ] || { rm -rf "$shim" "$log"; return 1; }
+  printf '%s\n' "$verify_out" | grep -q 'a secret is in the tree' || { rm -rf "$shim" "$log"; return 1; }
+  [ ! -e "$app/public/leak.txt" ] || { rm -rf "$shim" "$log"; return 1; }
+  printf '%s\n' 'STRIPE_SECRET_KEY=sk_live_localonly' > "$app/.dev.vars"
+  printf '%s\n' 'AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE' > "$app/.env"
+  built=$(sh "$app/scripts/verify.sh" --built) || { rm -f "$app/.dev.vars" "$app/.env"; rm -rf "$shim" "$log"; return 1; }
+  rm -f "$app/.dev.vars" "$app/.env"
+  printf '%s\n' "$built" | grep -q '^ok$' || { rm -rf "$shim" "$log"; return 1; }
+  [ ! -e "$app/.dev.vars" ] && [ ! -e "$app/.env" ] || { rm -rf "$shim" "$log"; return 1; }
+  cp "$app/.dev.vars.example" "$log.example"
+  printf '\n%s\n' 'sk_live_example' >> "$app/.dev.vars.example"
+  verify_status=0
+  verify_out=$(sh "$app/scripts/verify.sh" --built 2>&1) || verify_status=$?
+  cp "$log.example" "$app/.dev.vars.example"
+  rm -f "$log.example"
+  [ "$verify_status" != 0 ] || { rm -rf "$shim" "$log"; return 1; }
+  printf '%s\n' "$verify_out" | grep -q 'a secret is in the tree' || { rm -rf "$shim" "$log"; return 1; }
+  : > "$log"
+  deploy_status=0
+  deploy_out=$(DEPLOY_LOG="$log" PATH="$shim:$PATH" BRANCH=main sh "$app/scripts/release.sh" deploy 2>&1) || deploy_status=$?
+  [ "$deploy_status" != 0 ] || { rm -rf "$shim" "$log"; return 1; }
+  grep -q 'called' "$log" || { rm -rf "$shim" "$log"; return 1; }
+  hook='https://hooks.example/pipeline-ok-marker'
+  : > "$log"
+  printed=$(NOTIFY_PRINT=1 DEPLOY_WEBHOOK_URL="$hook" BRANCH=main sh "$app/scripts/release.sh" notify 2>"$log") || {
+    rm -rf "$shim" "$log"
+    return 1
+  }
+  printf '%s\n' "$printed" | grep -q '"environment": "production"' || { rm -rf "$shim" "$log"; return 1; }
+  printf '%s\n%s\n' "$printed" "$(cat "$log")" | grep -q "$hook" && { rm -rf "$shim" "$log"; return 1; }
   python3 - "$app/package.json" <<'PY'
 import json, sys
 path = sys.argv[1]
@@ -178,6 +246,21 @@ PY
     rm -rf "$shim" "$log" "$log.out" "$log.err"
     return 1
   fi
+  python3 - "$app" "$secret" <<'PY' || { rm -rf "$shim" "$log" "$log.out" "$log.err"; return 1; }
+import os, subprocess, sys
+app, secret = sys.argv[1:]
+env = os.environ.copy()
+env.update({
+    "DEPLOY_WEBHOOK_URL": "https://" + secret + "\uff20" + "example.com/hook",
+    "APP_NAME": "acme",
+    "BRANCH": "main",
+    "ENVIRONMENT": "production",
+    "APP_VERSION": "0.1.0+abc",
+})
+proc = subprocess.run(["sh", os.path.join(app, "scripts/notify.sh")], env=env, capture_output=True, text=True)
+if proc.returncode == 0 or secret in proc.stdout or secret in proc.stderr:
+    sys.exit(1)
+PY
   rm -rf "$shim" "$log" "$log.out" "$log.err"
 }
 

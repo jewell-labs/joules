@@ -37,8 +37,12 @@ pat=$(printf '%s%s|%s%s|%s%s|%s|%s %s' \
   'rk_' 'live_' \
   'AKIA[0-9A-Z]{16}' \
   'BEGIN' 'PRIVATE KEY')
+# .env and .dev.vars are gitignored credentials. .dev.vars.example is tracked, so it stays in the scan.
 hits=$(find . \
-  \( -name node_modules -o -name dist -o -name .wrangler -o -name .output -o -name .git -o -name screenshots \) -prune \
+  \( -name node_modules -o -name dist -o -name .wrangler -o -name .output -o -name .git -o -name screenshots \
+    -o -name .env -o -name '.env.*' -o -name .dev.vars \
+    -o \( -name '.dev.vars.*' ! -name .dev.vars.example \) \
+  \) -prune \
   -o -type f -exec grep -I -l -E "$pat" {} + 2>/dev/null || true)
 if [ -n "$hits" ]; then
   echo "a secret is in the tree" >&2
