@@ -184,11 +184,22 @@ def js_single(value):
 def json_string(value):
     return json.dumps(value, ensure_ascii=False)[1:-1]
 
+def html_text(value):
+    return (
+        value.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+        .replace("'", "&#39;")
+    )
+
 def title_for(rel):
     if rel == "public/manifest.webmanifest":
         return json_string(title)
     if rel in {"src/routes/__root.tsx", "src/routes/index.tsx"}:
         return js_single(title)
+    if rel == "public/offline.html":
+        return html_text(title)
     return title
 
 for dirpath, dirnames, filenames in os.walk(root):

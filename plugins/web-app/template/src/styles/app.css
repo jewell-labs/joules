@@ -1,13 +1,92 @@
-* {
+html {
   box-sizing: border-box;
+  color-scheme: light dark;
+  background: light-dark(#f3f4f6, #101318);
+  color: light-dark(#14181f, #f2f4f7);
+  accent-color: light-dark(#1f4fd8, #9db7ff);
+}
+
+body,
+main,
+h1,
+p,
+a,
+button {
+  box-sizing: inherit;
 }
 
 body {
   margin: 0;
+  min-height: 100dvh;
+  padding:
+    calc(env(safe-area-inset-top) + clamp(1.25rem, 8dvh, 5rem))
+    env(safe-area-inset-right)
+    calc(env(safe-area-inset-bottom) + 1.25rem)
+    env(safe-area-inset-left);
+  background: light-dark(#f3f4f6, #101318);
+  color: light-dark(#14181f, #f2f4f7);
   font-family: system-ui, sans-serif;
+  font-size: 1rem;
+  line-height: 1.5;
 }
 
 main {
-  width: min(42rem, calc(100% - 2rem));
-  margin: 4rem auto;
+  width: min(36rem, calc(100% - 2rem));
+  margin-inline: auto;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  background: light-dark(#ffffff, #181c23);
+  border: 1px solid light-dark(#e2e5ea, #2c3340);
+  border-radius: 1.5rem;
+  corner-shape: squircle;
+}
+
+h1 {
+  margin: 0 0 0.75rem;
+  font-size: clamp(2rem, 1rem + 2.2vw, 3.25rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  text-wrap: balance;
+  overflow-wrap: break-word;
+}
+
+.lede {
+  max-width: 42ch;
+  margin: 0;
+  color: light-dark(#3e4854, #c5ced6);
+  text-wrap: pretty;
+  overflow-wrap: break-word;
+}
+
+.status {
+  margin: 1.5rem 0 0;
+  padding: 0.9rem 1rem;
+  border: 1px solid light-dark(#e2e5ea, #2c3340);
+  border-radius: 0.85rem;
+  background: light-dark(#f3f4f6, #101318);
+}
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  margin-top: 1.5rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid light-dark(#e2e5ea, #2c3340);
+  border-radius: 999px;
+  background: light-dark(#ffffff, #181c23);
+  color: inherit;
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.action:focus-visible {
+  outline: 2px solid light-dark(#1f4fd8, #9db7ff);
+  outline-offset: 3px;
+}
+
+::selection {
+  background: light-dark(#d5def8, #2a3a66);
+  color: light-dark(#14181f, #f2f4f7);
 }

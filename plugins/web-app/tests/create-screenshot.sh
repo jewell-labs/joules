@@ -96,6 +96,16 @@ if data["name"] != title or data["short_name"] != title:
     sys.exit("manifest")
 if not (app / "README.md").read_text().startswith("# " + title):
     sys.exit("readme")
+offline = (app / "public/offline.html").read_text()
+escaped = (
+    title.replace("&", "&amp;")
+    .replace("<", "&lt;")
+    .replace(">", "&gt;")
+    .replace('"', "&quot;")
+    .replace("'", "&#39;")
+)
+if f"<title>{escaped}</title>" not in offline or "<App>" in offline:
+    sys.exit("offline title")
 PY
 node --input-type=module - "$nasty" "$work/nasty-title.txt" <<'JS' || fail "js title"
 import fs from "fs"

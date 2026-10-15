@@ -2,13 +2,87 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Offline</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#f3f4f6" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#101318" media="(prefers-color-scheme: dark)" />
+    <title>__APP_TITLE__</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <style>
+      html {
+        box-sizing: border-box;
+        color-scheme: light dark;
+        background: light-dark(#f3f4f6, #101318);
+        color: light-dark(#14181f, #f2f4f7);
+      }
+      body,
+      main,
+      h1,
+      p,
+      a {
+        box-sizing: inherit;
+      }
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        padding:
+          calc(env(safe-area-inset-top) + clamp(1.25rem, 8dvh, 5rem))
+          env(safe-area-inset-right)
+          calc(env(safe-area-inset-bottom) + 1.25rem)
+          env(safe-area-inset-left);
+        background: light-dark(#f3f4f6, #101318);
+        color: light-dark(#14181f, #f2f4f7);
+        font-family: system-ui, sans-serif;
+        font-size: 1rem;
+        line-height: 1.5;
+      }
+      main {
+        width: min(36rem, calc(100% - 2rem));
+        margin-inline: auto;
+        padding: clamp(1.25rem, 3vw, 2rem);
+        background: light-dark(#ffffff, #181c23);
+        border: 1px solid light-dark(#e2e5ea, #2c3340);
+        border-radius: 1.5rem;
+        corner-shape: squircle;
+      }
+      h1 {
+        margin: 0 0 0.75rem;
+        font-size: clamp(2rem, 1rem + 2.2vw, 3.25rem);
+        font-weight: 600;
+        letter-spacing: -0.03em;
+        line-height: 1.15;
+        text-wrap: balance;
+        overflow-wrap: break-word;
+      }
+      p {
+        max-width: 42ch;
+        margin: 0;
+        color: light-dark(#3e4854, #c5ced6);
+        text-wrap: pretty;
+        overflow-wrap: break-word;
+      }
+      a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 2.75rem;
+        margin-top: 1.5rem;
+        padding: 0.5rem 1rem;
+        border: 1px solid light-dark(#e2e5ea, #2c3340);
+        border-radius: 999px;
+        color: inherit;
+        text-decoration: none;
+      }
+      a:focus-visible {
+        outline: 2px solid light-dark(#1f4fd8, #9db7ff);
+        outline-offset: 3px;
+      }
+    </style>
   </head>
   <body>
     <main>
-      <h1>Offline</h1>
-      <p>This page is cached for a poor network.</p>
+      <h1>You are offline</h1>
+      <p>The network failed. Try again when it is back.</p>
+      <a href="/">Try again</a>
     </main>
   </body>
 </html>
