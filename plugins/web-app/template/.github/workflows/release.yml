@@ -2,17 +2,20 @@
 name: release
 on:
   push:
+permissions:
+  contents: read
+# One release at a time per branch, in push order.
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
 jobs:
   release:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
         with:
-          node-version: "24"
-          cache: npm
-      - run: npm ci
+          persist-credentials: false
       - id: gate
         env:
           BRANCH: ${{ github.ref_name }}
@@ -26,19 +29,39 @@ jobs:
           else
             exit "$status"
           fi
+      - if: steps.gate.outputs.deploy != 'true'
+        run: echo "skip deploy"
+      - if: steps.gate.outputs.deploy == 'true'
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+      - if: steps.gate.outputs.deploy == 'true'
+        run: npm ci
       - if: steps.gate.outputs.deploy == 'true'
         id: chrome
         uses: browser-actions/setup-chrome@v2
         with:
           install-dependencies: true
-      - name: Test, verify, screenshot, and deploy listed branches
+      - name: Test, verify, and screenshot
+        if: steps.gate.outputs.deploy == 'true'
         env:
           BRANCH: ${{ github.ref_name }}
           CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
+        run: sh scripts/release.sh check
+      - name: Deploy
+        if: steps.gate.outputs.deploy == 'true'
+        env:
+          BRANCH: ${{ github.ref_name }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: sh scripts/release.sh deploy
+      - name: Notify
+        if: steps.gate.outputs.deploy == 'true'
+        env:
+          BRANCH: ${{ github.ref_name }}
           DEPLOY_WEBHOOK_URL: ${{ secrets.DEPLOY_WEBHOOK_URL }}
-        run: sh scripts/release.sh
+        run: sh scripts/release.sh notify
       - if: steps.gate.outputs.deploy == 'true'
         uses: actions/upload-artifact@v7
         with:

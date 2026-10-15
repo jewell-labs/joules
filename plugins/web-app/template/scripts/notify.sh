@@ -5,7 +5,11 @@ set -eu
 root=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 cd "$root"
 exec python3 - <<'PY'
-import json, os, sys, urllib.request
+import http.client
+import json
+import os
+import sys
+from urllib.parse import urlsplit
 
 required = ("APP_NAME", "BRANCH", "ENVIRONMENT", "APP_VERSION")
 missing = [name for name in required if not os.environ.get(name)]
@@ -26,11 +30,6 @@ for value in payload.values():
         sys.stderr.write("webhook not sent: payload has an empty field\n")
         sys.exit(1)
 
-if os.environ.get("NOTIFY_PRINT") == "1":
-    json.dump(payload, sys.stdout)
-    sys.stdout.write("\n")
-    sys.exit(0)
-
 url = os.environ.get("DEPLOY_WEBHOOK_URL", "")
 if not url:
     sys.stderr.write("webhook not sent: DEPLOY_WEBHOOK_URL is empty\n")
@@ -38,21 +37,49 @@ if not url:
 if not url.startswith("https://"):
     sys.stderr.write("webhook not sent: DEPLOY_WEBHOOK_URL must be https\n")
     sys.exit(1)
-
-request = urllib.request.Request(
-    url,
-    data=json.dumps(payload).encode(),
-    headers={"content-type": "application/json"},
-    method="POST",
-)
-try:
-    with urllib.request.urlopen(request, timeout=30) as response:
-        status = response.status
-except Exception as exc:
-    sys.stderr.write(f"webhook not sent: {exc}\n")
+parts = urlsplit(url)
+# user:secret@host becomes a port in urllib errors and is not masked as the whole secret.
+if parts.username is not None or parts.password is not None or "@" in parts.netloc:
+    sys.stderr.write("webhook not sent: DEPLOY_WEBHOOK_URL must not contain userinfo\n")
     sys.exit(1)
+if not parts.hostname:
+    sys.stderr.write("webhook not sent: DEPLOY_WEBHOOK_URL must be https\n")
+    sys.exit(1)
+
+if os.environ.get("NOTIFY_PRINT") == "1":
+    json.dump(payload, sys.stdout)
+    sys.stdout.write("\n")
+    sys.exit(0)
+
+path = parts.path or "/"
+if parts.query:
+    path = path + "?" + parts.query
+body = json.dumps(payload).encode()
+status = 0
+conn = None
+try:
+    # http.client does not follow redirects. urlopen would retry a 302 as a GET, including to http.
+    conn = http.client.HTTPSConnection(parts.hostname, parts.port or 443, timeout=30)
+    conn.request(
+        "POST",
+        path,
+        body=body,
+        headers={"content-type": "application/json"},
+    )
+    response = conn.getresponse()
+    status = response.status
+    response.read()
+except Exception as exc:
+    sys.stderr.write("webhook not sent: " + type(exc).__name__ + "\n")
+    sys.exit(1)
+finally:
+    if conn is not None:
+        try:
+            conn.close()
+        except Exception:
+            pass
 if status < 200 or status >= 300:
-    sys.stderr.write(f"webhook not sent: status {status}\n")
+    sys.stderr.write("webhook not sent: status %s\n" % status)
     sys.exit(1)
 sys.stdout.write("webhook sent\n")
 PY

@@ -1,5 +1,6 @@
 #!/bin/sh
-# Print the branch and its Wrangler environment, or exit 3 when the branch is not listed.
+# Print the branch and its Wrangler environment.
+# Exit 3 only when the branch is not a key. A listed key with a bad value exits 2.
 set -eu
 
 root=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
@@ -24,10 +25,10 @@ except OSError as exc:
 if not isinstance(data, dict):
     sys.stderr.write("branch map must be an object\n")
     sys.exit(2)
-env = data.get(branch)
-if not isinstance(env, str) or not env:
+if branch not in data:
     sys.exit(3)
-if re.fullmatch(r"[A-Za-z0-9_-]+", env) is None:
+env = data[branch]
+if not isinstance(env, str) or re.fullmatch(r"[A-Za-z0-9_-]+", env) is None:
     sys.stderr.write("environment name is not a single token\n")
     sys.exit(2)
 sys.stdout.write(env)

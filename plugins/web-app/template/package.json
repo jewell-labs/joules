@@ -8,7 +8,7 @@
     "generate-routes": "tsr generate",
     "build": "vite build",
     "preview": "vite preview",
-    "deploy": "npm run build && wrangler deploy",
+    "deploy": "sh scripts/release.sh",
     "test": "node --test tests/ready.test.ts",
     "cf-typegen": "wrangler types"
   },

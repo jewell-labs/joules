@@ -100,17 +100,85 @@ pipeline_ok() {
   [ ! -s "$log" ] || { rm -rf "$shim" "$log"; return 1; }
   out=$(RELEASE_PLAN=1 BRANCH=staging sh "$app/scripts/release.sh") || { rm -rf "$shim" "$log"; return 1; }
   printf '%s\n' "$out" | grep -q 'environment=staging' || { rm -rf "$shim" "$log"; return 1; }
+  if sh "$app/scripts/verify.sh" --built >/dev/null 2>&1; then
+    rm -rf "$shim" "$log"
+    return 1
+  fi
+  mkdir -p "$app/dist/client"
+  cp "$app/public/manifest.webmanifest" "$app/public/offline.html" "$app/public/sw.js" "$app/dist/client/"
+  built=$(sh "$app/scripts/verify.sh" --built) || { rm -rf "$shim" "$log"; return 1; }
+  printf '%s\n' "$built" | grep -q '^ok$' || { rm -rf "$shim" "$log"; return 1; }
+  python3 - "$app/package.json" <<'PY'
+import json, sys
+path = sys.argv[1]
+data = json.load(open(path, encoding="utf-8"))
+data["version"] = "1.2.3+meta"
+json.dump(data, open(path, "w", encoding="utf-8"))
+PY
+  tagged=$(RELEASE_PLAN=1 BRANCH=main sh "$app/scripts/release.sh") || { rm -rf "$shim" "$log"; return 1; }
+  printf '%s\n' "$tagged" | grep -q 'wrangler deploy --tag meta' && { rm -rf "$shim" "$log"; return 1; }
+  printf '%s\n' "$tagged" | grep -q -- '--message 1.2.3+meta+' || { rm -rf "$shim" "$log"; return 1; }
+  python3 - "$app/package.json" <<'PY'
+import json, sys
+path = sys.argv[1]
+data = json.load(open(path, encoding="utf-8"))
+data["version"] = "0.1.0"
+json.dump(data, open(path, "w", encoding="utf-8"))
+PY
+  python3 - "$app/deploy/branches.json" <<'PY'
+import json, sys
+path = sys.argv[1]
+data = json.load(open(path, encoding="utf-8"))
+data["main"] = ""
+json.dump(data, open(path, "w", encoding="utf-8"))
+PY
+  bad_status=0
+  bad_out=$(DEPLOY_LOG="$log" PATH="$shim:$PATH" BRANCH=main sh "$app/scripts/release.sh" 2>&1) || bad_status=$?
+  [ "$bad_status" != 0 ] || { rm -rf "$shim" "$log"; return 1; }
+  printf '%s\n' "$bad_out" | grep -q 'skip deploy' && { rm -rf "$shim" "$log"; return 1; }
+  [ ! -s "$log" ] || { rm -rf "$shim" "$log"; return 1; }
+  python3 - "$app/deploy/branches.json" <<'PY'
+import json, sys
+path = sys.argv[1]
+data = json.load(open(path, encoding="utf-8"))
+data["main"] = "production"
+json.dump(data, open(path, "w", encoding="utf-8"))
+PY
   if DEPLOY_WEBHOOK_URL= APP_NAME=acme BRANCH=main ENVIRONMENT=production APP_VERSION=0.1.0+abc \
     sh "$app/scripts/notify.sh" >/dev/null 2>&1
   then
     rm -rf "$shim" "$log"
     return 1
   fi
-  printed=$(NOTIFY_PRINT=1 APP_NAME=acme BRANCH=main ENVIRONMENT=production APP_VERSION=0.1.0+abc DEPLOY_RESULT=deployed \
-    sh "$app/scripts/notify.sh") || { rm -rf "$shim" "$log"; return 1; }
+  if NOTIFY_PRINT=1 DEPLOY_WEBHOOK_URL= APP_NAME=acme BRANCH=main ENVIRONMENT=production APP_VERSION=0.1.0+abc \
+    sh "$app/scripts/notify.sh" >/dev/null 2>&1
+  then
+    rm -rf "$shim" "$log"
+    return 1
+  fi
+  hook='https://hooks.example/pipeline-ok-marker'
+  printed=$(NOTIFY_PRINT=1 DEPLOY_WEBHOOK_URL="$hook" APP_NAME=acme BRANCH=main ENVIRONMENT=production APP_VERSION=0.1.0+abc DEPLOY_RESULT=deployed \
+    sh "$app/scripts/notify.sh" 2>"$log") || { rm -rf "$shim" "$log"; return 1; }
   printf '%s\n' "$printed" | grep -q '"app": "acme"' || { rm -rf "$shim" "$log"; return 1; }
-  printf '%s\n' "$printed" | grep -q 'sk-live-\|DEPLOY_WEBHOOK_URL' && { rm -rf "$shim" "$log"; return 1; }
-  rm -rf "$shim" "$log"
+  printf '%s\n' "$printed" | grep -q '"branch": "main"' || { rm -rf "$shim" "$log"; return 1; }
+  printf '%s\n' "$printed" | grep -q '"environment": "production"' || { rm -rf "$shim" "$log"; return 1; }
+  printf '%s\n' "$printed" | grep -q '"version": "0.1.0+abc"' || { rm -rf "$shim" "$log"; return 1; }
+  printf '%s\n' "$printed" | grep -q '"result": "deployed"' || { rm -rf "$shim" "$log"; return 1; }
+  printf '%s\n%s\n' "$printed" "$(cat "$log")" | grep -q "$hook" && { rm -rf "$shim" "$log"; return 1; }
+  printf '%s\n' "$printed" | grep -q 'DEPLOY_WEBHOOK_URL' && { rm -rf "$shim" "$log"; return 1; }
+  secret='SECRETTOKEN123'
+  : > "$log"
+  if DEPLOY_WEBHOOK_URL="https://user:${secret}@hooks.example/hook" APP_NAME=acme BRANCH=main ENVIRONMENT=production APP_VERSION=0.1.0+abc \
+    sh "$app/scripts/notify.sh" >"$log.out" 2>"$log.err"
+  then
+    rm -rf "$shim" "$log" "$log.out" "$log.err"
+    return 1
+  fi
+  if grep -q "$secret" "$log.out" "$log.err"; then
+    rm -rf "$shim" "$log" "$log.out" "$log.err"
+    return 1
+  fi
+  rm -rf "$shim" "$log" "$log.out" "$log.err"
 }
 
 check_one() {
@@ -157,6 +225,7 @@ if [ "$mode" = "check" ]; then
     grep -q '"name": "acme-app"' "$work/app/package.json" || bad=1
     grep -q '"name": "acme-app"' "$work/app/package-lock.json" || bad=1
     grep -q '"database_name": "acme-app"' "$work/app/wrangler.jsonc" || bad=1
+    grep -q '"database_name": "acme-app-staging"' "$work/app/wrangler.jsonc" || bad=1
     grep -q 'Acme App' "$work/app/src/routes/index.tsx" || bad=1
     grep -q 'Acme App' "$work/app/public/manifest.webmanifest" || bad=1
     grep -R -q -e '__APP_NAME__' -e '__APP_TITLE__' "$work/app" && bad=1

@@ -29,8 +29,19 @@ if grep -q 'react-start' wrangler.jsonc; then
   echo "server entry is the React one" >&2
   exit 1
 fi
-if grep -R -n -E 'sk-live-|AKIA[0-9A-Z]{16}|BEGIN PRIVATE KEY' src >/dev/null 2>&1; then
-  echo "a secret is in src" >&2
+
+# Pieces stay split so this file does not contain the needles it searches for.
+pat=$(printf '%s%s|%s%s|%s%s|%s|%s %s' \
+  'sk-' 'live-' \
+  'sk_' 'live_' \
+  'rk_' 'live_' \
+  'AKIA[0-9A-Z]{16}' \
+  'BEGIN' 'PRIVATE KEY')
+hits=$(find . \
+  \( -name node_modules -o -name dist -o -name .wrangler -o -name .output -o -name .git -o -name screenshots \) -prune \
+  -o -type f -exec grep -I -l -E "$pat" {} + 2>/dev/null || true)
+if [ -n "$hits" ]; then
+  echo "a secret is in the tree" >&2
   exit 1
 fi
 echo ok
