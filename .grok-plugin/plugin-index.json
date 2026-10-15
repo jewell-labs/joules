@@ -43,12 +43,12 @@
       }
     },
     "web-app": {
-      "version": "0.10.2",
+      "version": "0.11.0",
       "components": {
         "skills": [
           {
             "name": "scaffold",
-            "description": "Write or extend a Void pages app from the current docs. The app connects listed branches without a workflow file and serves one public HTTP healthcheck."
+            "description": "Write or extend a Void pages app from the current docs. The app persists each deploy on Cloudflare and serves one public HTTP healthcheck."
           }
         ],
         "commands": [
@@ -66,7 +66,15 @@
           },
           {
             "name": "validate",
-            "description": "Run the app checks for each mapped branch."
+            "description": "Run the app checks. Does not deploy."
+          },
+          {
+            "name": "clone",
+            "description": "Clone one worker version onto this computer. Does not deploy."
+          },
+          {
+            "name": "deploy",
+            "description": "Deploy the app with Void and persist that version."
           },
           {
             "name": "evaluate",

@@ -1,7 +1,7 @@
 {
   "name": "web-app",
-  "version": "0.10.2",
-  "description": "Create or extend a Void pages app on Cloudflare Workers. A page, a table, or a stream is one addition. The app connects the branches it lists to an automatic validate-build-deploy pipeline without a workflow file, and serves one public HTTP healthcheck.",
+  "version": "0.11.0",
+  "description": "Create or extend a Void pages app on Cloudflare Workers. A page, a table, or a stream is one addition. The app persists each deploy so another computer can clone that version, deploys with Void, and serves one public HTTP healthcheck.",
   "author": {
     "name": "Joules",
     "url": "https://github.com/jewell-labs/joules"
