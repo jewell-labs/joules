@@ -1,0 +1,36 @@
+{
+  "name": "web-app-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev --port 3000",
+    "generate-routes": "tsr generate",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "npm run build && wrangler deploy",
+    "cf-typegen": "wrangler types"
+  },
+  "dependencies": {
+    "@cloudflare/vite-plugin": "^1.26.0",
+    "@tanstack/solid-router": "1.170.41",
+    "@tanstack/solid-start": "1.169.2",
+    "drizzle-orm": "^0.44.6",
+    "solid-js": "^1.9.12"
+  },
+  "devDependencies": {
+    "@tanstack/router-cli": "^1.133.21",
+    "drizzle-kit": "^0.31.5",
+    "typescript": "^6.0.2",
+    "vite": "^8.0.0",
+    "vite-plugin-solid": "^2.11.12",
+    "wrangler": "^4.70.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "lightningcss",
+      "sharp",
+      "workerd"
+    ]
+  }
+}

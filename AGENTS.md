@@ -85,7 +85,7 @@ If the current page for a host does not yet say how this marketplace installs th
 
 ## Catalog
 
-- One plugin you author does one job, at `plugins/<name>/`. This repo ships the authoring workflows as the single plugin `joules-plugins`.
+- One plugin you author does one job, at `plugins/<name>/`. This repo ships `joules-plugins` for authoring and `web-app` for the compliant web app check.
 - List it in `.grok-plugin/marketplace.json`. Match the fields already in that file.
 - When `.grok-plugin/plugin-index.json` exists, list the components you actually added.
 - A plugin that lives in this repo uses a local source path.
@@ -105,4 +105,5 @@ Run:
 
 ```bash
 grok plugin validate plugins/joules-plugins
+grok plugin validate plugins/web-app
 ```

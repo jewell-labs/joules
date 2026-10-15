@@ -1,0 +1,5 @@
+/web-app
+
+Make this app 100% compliant.
+
+Run the check script that ships with the web-app plugin on this directory. Fix every failure it prints. Do not add features. Do not deploy, push, or spend.

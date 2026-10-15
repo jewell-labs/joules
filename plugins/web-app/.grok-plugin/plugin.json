@@ -1,0 +1,13 @@
+{
+  "name": "web-app",
+  "version": "0.1.0",
+  "description": "Make one TanStack Start app on Cloudflare Workers pass the web-app check.",
+  "author": {
+    "name": "Joules",
+    "url": "https://github.com/jewell-labs/joules"
+  },
+  "homepage": "https://github.com/jewell-labs/joules/tree/main/plugins/web-app",
+  "repository": "https://github.com/jewell-labs/joules",
+  "license": "MIT",
+  "keywords": ["web-app", "tanstack", "cloudflare", "solid"]
+}

@@ -23,6 +23,17 @@
           }
         ]
       }
+    },
+    "web-app": {
+      "version": "0.1.0",
+      "components": {
+        "skills": [
+          {
+            "name": "web-app",
+            "description": "Make one TanStack Start app on Cloudflare Workers pass the web-app check."
+          }
+        ]
+      }
     }
   }
 }

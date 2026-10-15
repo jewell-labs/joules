@@ -1,6 +1,6 @@
 {
   "name": "joules",
-  "description": "One Grok plugin that creates, evaluates, updates, and scores other plugins from the current docs.",
+  "description": "Grok plugins for authoring a plugin and for checking a web app.",
   "owner": {
     "name": "Joules"
   },
@@ -18,6 +18,21 @@
       "source": {
         "type": "local",
         "path": "./plugins/joules-plugins"
+      }
+    },
+    {
+      "name": "web-app",
+      "description": "Make one TanStack Start app on Cloudflare Workers pass the web-app check.",
+      "category": "development",
+      "version": "0.1.0",
+      "author": "Joules",
+      "homepage": "https://github.com/jewell-labs/joules/tree/main/plugins/web-app",
+      "keywords": ["web-app", "tanstack", "cloudflare", "solid"],
+      "domains": [],
+      "tags": ["web"],
+      "source": {
+        "type": "local",
+        "path": "./plugins/web-app"
       }
     }
   ]

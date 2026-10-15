@@ -1,0 +1,17 @@
+node_modules
+.DS_Store
+dist
+dist-ssr
+*.local
+.env
+.env.*
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.nitro
+.tanstack
+.wrangler
+.output
+.vinxi
+worker-configuration.d.ts
+__unconfig*

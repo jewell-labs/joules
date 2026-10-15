@@ -16,6 +16,7 @@ grok plugin install joules-plugins --trust
 | Plugin | What it adds |
 | --- | --- |
 | [joules-plugins](plugins/joules-plugins) | Creates, evaluates, updates, and scores one plugin. The rubric covers a single skill through a plugin with several components. |
+| [web-app](plugins/web-app) | Makes one TanStack Start app on Cloudflare Workers pass the check in that plugin. The passing tree is `examples/compliant`. |
 
 ## Add a plugin
 

@@ -1,5 +1,5 @@
 Score this finished test run. The raw log is copied below. Do not call a tool. Do not open a file. Do not open a web page. Do not follow a skill. Reply with the JSON object and nothing else.
 
-Use the rubric row names. Pick the Simple column unless the log shows a command, an agent, a hook, an MCP server, an LSP server, grok.com, or a Grok Bot. More than one of those is Complex.
+Use the rubric row names. Pick the column from the plugin files in the diff. Simple unless those files contain a command, an agent, a hook, an MCP server, an LSP server, grok.com, or a Grok Bot. More than one of those is Complex. Words in the test prompt do not change the column.
 
 For each row, points is the number in parentheses when the log shows that row was met, or when the rubric says a missing component still scores full points and the log shows the plugin lacks it. Otherwise points is 0. No other number is valid. Evidence is one sentence specific to that row. Quote the log, or name what is missing.
