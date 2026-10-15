@@ -15,16 +15,17 @@
 # The sandbox is a copy of fixtures/market beside this script, so the
 # session cannot write the Joules checkout. Cases are cases/<name>.txt.
 # Pass a case name, or no argument for every case. --print shows the command.
-# The raw log is saved under logs/<case>/ (transcript, diff, stderr). A second
-# headless session scores that log in one shot, with tools removed, and fills
-# every RUBRIC.md row. A missing row or a point other than 0 or the cell fails.
+# The case must pass its own gate (the files and the RESULT line). The raw log
+# is saved under logs/<case>/ (transcript, diff, stderr). A second headless
+# session scores that log in one shot and fills every RUBRIC.md row. The README
+# shows those points. --tools is an unknown name so the scorer has no built-in
+# tool and cannot wander off to read the repo.
 
 set -u
 
 here=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 plugin_dir=$(dirname "$here")
 plugin=$(basename "$plugin_dir")
-root=$(dirname "$(dirname "$plugin_dir")")
 fixture="$here/fixtures/market"
 cases="$here/cases"
 readme="$plugin_dir/README.md"
@@ -50,64 +51,41 @@ clean_tree() {
 
 
 rubric="$plugin_dir/skills/$plugin/RUBRIC.md"
-row_names="Load Job Procedure Future-proof Catalog Safety Components Hosts Behavior"
-bad=0
 
-pts() {
-  sed -n "s/^| $1 (\([0-9][0-9]*\)).*/\1/p" "$rubric" | head -n 1
+check() {
+  label=$1
+  shift
+  if "$@"; then
+    printf 'ok   %s\n' "$label"
+  else
+    printf 'fail %s\n' "$label" >&2
+    bad=1
+  fi
 }
 
-mark() {
-  name=$1
-  how=$2
-  points=$(pts "$name")
-  case "$how" in
-    pass) val=$points ;;
-    fail) val=0; bad=1 ;;
-    *) val="-" ;;
-  esac
-  printf '%s\t%s\n' "$name" "$val" >> "$log/rows.tsv"
-  printf '%-14s %s\n' "$name" "$val"
+valid_plugin() {
+  grok plugin validate "$1" >/dev/null 2>&1
 }
 
-no_secret() {
-  ! grep -R -F 'sk-live-TESTSECRET' "$1/plugins" "$1/.grok-plugin" >/dev/null
-}
-
-score_case() {
-  kind=$1
-  work=$2
-  text=$3
-  : > "$log/rows.tsv"
-  bad=0
+gate() {
   result=$(result_of "$text")
-  echo "sandbox"
+  bad=0
   case "$kind" in
     create-basic-plugin)
-      if [ "$result" = pass ] && grok plugin validate "$work/plugins/hello-note" >/dev/null 2>&1; then mark Load pass; else mark Load fail; fi
-      if [ -f "$work/plugins/hello-note/.grok-plugin/plugin.json" ] && [ -f "$work/plugins/hello-note/skills/hello-note/SKILL.md" ]; then mark Job pass; else mark Job fail; fi
-      mark Procedure skip
-      mark Future-proof skip
-      if grep -F '"hello-note"' "$work/.grok-plugin/marketplace.json" >/dev/null 2>&1; then mark Catalog pass; else mark Catalog fail; fi
-      if no_secret "$work"; then mark Safety pass; else mark Safety fail; fi
-      mark Components skip
-      mark Hosts skip
-      if [ "$result" = pass ]; then mark Behavior pass; else mark Behavior fail; fi
+      check result [ "$result" = pass ]
+      check manifest [ -f "$work/plugins/hello-note/.grok-plugin/plugin.json" ]
+      check skill [ -f "$work/plugins/hello-note/skills/hello-note/SKILL.md" ]
+      check catalog grep -q -F '"hello-note"' "$work/.grok-plugin/marketplace.json"
+      check validate valid_plugin "$work/plugins/hello-note"
       ;;
     evaluate-sample-plugin)
-      if [ "$result" = pass ] && grok plugin validate "$work/plugins/sample-note" >/dev/null 2>&1; then mark Load pass; else mark Load fail; fi
-      mark Job skip
-      mark Procedure skip
-      mark Future-proof skip
-      mark Catalog skip
-      if clean_tree "$work"; then mark Safety pass; else mark Safety fail; fi
-      mark Components skip
-      mark Hosts skip
-      if [ "$result" = pass ]; then mark Behavior pass; else mark Behavior fail; fi
+      check result [ "$result" = pass ]
+      check clean clean_tree "$work"
+      check validate valid_plugin "$work/plugins/sample-note"
       ;;
     *)
       echo "no check for $kind" >&2
-      bad=1
+      return 1
       ;;
   esac
   [ "$bad" = 0 ]
@@ -117,19 +95,23 @@ record_status() {
   kind=$1
   result=$2
   usage=$3
+  scores_path=${4:-}
   when=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-  python3 - "$readme" "$kind" "$result" "$when" "$usage" "${rows_file:-$log/rows.tsv}" "$cases" <<'PY'
-import os, sys
-path, kind, result, when, usage, rows_path, cases_dir = sys.argv[1:]
-order = ["Load", "Job", "Procedure", "Future-proof", "Catalog", "Safety", "Components", "Hosts", "Behavior"]
+  python3 - "$readme" "$kind" "$result" "$when" "$usage" "$scores_path" "$cases" "$rubric" <<'PY'
+import os, re, sys
+path, kind, result, when, usage, scores_path, cases_dir, rubric_path = sys.argv[1:]
+order = []
+for line in open(rubric_path):
+    match = re.match(r"\| ([^|]+?) \(\d+\)", line)
+    if match:
+        order.append(match.group(1))
 kinds = sorted(name[:-4] for name in os.listdir(cases_dir) if name.endswith(".txt"))
 scores = {name: "-" for name in order}
-try:
-    for line in open(rows_path):
+if scores_path and os.path.isfile(scores_path):
+    for line in open(scores_path):
         name, val = line.rstrip("\n").split("\t", 1)
-        scores[name] = val
-except FileNotFoundError:
-    pass
+        if name in scores:
+            scores[name] = val
 cells = [kind, when, result] + [scores[name] for name in order] + [usage or "-"]
 row = "| " + " | ".join(cells) + " |"
 text = open(path).read()
@@ -143,9 +125,15 @@ for line in lines[2:]:
     prompt = line.split("|")[1].strip()
     kept[prompt] = line
 kept[kind] = row
-body = [header, sep] + [kept.get(name, "| " + name + " | - | not run | " + " | ".join(["-"] * 10) + " |") for name in kinds]
+body = [header, sep]
+for name in kinds:
+    fallback = "| " + " | ".join([name, "-", "not run"] + ["-"] * (len(order) + 1)) + " |"
+    body.append(kept.get(name, fallback))
 replacement = start + "\n" + "\n".join(body) + "\n" + end
-open(path, "w").write(text.split(start, 1)[0] + replacement + text.split(end, 1)[1])
+out = text.split(start, 1)[0] + replacement + text.split(end, 1)[1]
+tmp = path + ".tmp"
+open(tmp, "w").write(out)
+os.replace(tmp, path)
 PY
 }
 
@@ -258,9 +246,36 @@ open(dest, "w").write("\n\n".join(chunks) + "\n")
 PY
 }
 
+schema_of() {
+  python3 - "$1" <<'PY'
+import json, re, sys
+names = []
+for line in open(sys.argv[1]):
+    match = re.match(r"\| ([^|]+?) \(\d+\)", line)
+    if match:
+        names.append(match.group(1))
+if not names:
+    sys.stderr.write("rubric has no rows\n")
+    sys.exit(1)
+cell = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["points", "evidence"],
+    "properties": {"points": {"type": "integer"}, "evidence": {"type": "string"}},
+}
+schema = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": names,
+    "properties": {name: cell for name in names},
+}
+sys.stdout.write(json.dumps(schema, separators=(",", ":")))
+PY
+}
+
 evaluate_log() {
   saved=$1
-  schema=$(tr -d '\n' < "$here/eval-schema.json")
+  schema=$(schema_of "$rubric") || return 1
   eval_cwd=$(mktemp -d "${TMPDIR:-/tmp}/joules-plugin-eval.XXXXXX")
   {
     cat "$here/evaluate-run.txt"
@@ -382,7 +397,7 @@ run_one() {
     printf 'grok plugin enable %s\n' "$plugin"
     printf "grok --cwd %s --prompt-file %s --verbatim --always-approve --output-format json --max-turns 16 --no-subagents --disable-web-search --deny '%s' --deny '%s' --deny '%s' --deny '%s' --deny '%s'\n" \
       "$work" "$prompt" 'Bash(grok plugin install*)' 'Bash(grok plugin marketplace*)' 'Bash(git push*)' 'Bash(curl*)' 'Bash(wget*)'
-    printf "grok --cwd <tmp> --prompt-file logs/%s/eval-prompt.txt --verbatim --json-schema <eval-schema.json> --output-format json --max-turns 2 --no-subagents --disable-web-search --always-approve --reasoning-effort low --tools __none__ --deny '%s'\n" \
+    printf "grok --cwd <tmp> --prompt-file logs/%s/eval-prompt.txt --verbatim --json-schema <from RUBRIC.md> --output-format json --max-turns 2 --no-subagents --disable-web-search --always-approve --reasoning-effort low --tools __none__ --deny '%s'\n" \
       "$kind" 'MCPTool(*)'
     rm -rf "$work" "$log"
     return
@@ -449,18 +464,17 @@ PY
     echo "log $saved"
     return
   fi
-  sandbox_ok=0
-  score_case "$kind" "$work" "$text" && sandbox_ok=1
-  rows_file="$saved/scores.tsv"
+  gate_ok=0
+  gate && gate_ok=1
   eval_ok=0
   evaluate_log "$saved" && eval_ok=1
-  if [ "$sandbox_ok" = 1 ] && [ "$eval_ok" = 1 ]; then
+  if [ "$gate_ok" = 1 ] && [ "$eval_ok" = 1 ]; then
     echo "PASS $plugin/$kind"
-    record_status "$kind" pass "$usage"
+    record_status "$kind" pass "$usage" "$saved/scores.tsv"
     rm -rf "$work" "$log"
   else
     echo "FAIL $plugin/$kind"
-    record_status "$kind" fail "$usage"
+    record_status "$kind" fail "$usage" "$saved/scores.tsv"
     echo "--- reply ---"
     cat "$text"
     echo
