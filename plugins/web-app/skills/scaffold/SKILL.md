@@ -82,7 +82,7 @@ When the decisions include a new Cloudflare project, run Prepare first. When a g
 
 The app is its own Cloudflare Worker. Its worker name is its package name. Each environment the prompt names is its own worker and its own persistence name. Do not attach it to another project with a service binding, a route, or a dispatch namespace. Keep server secrets on the server, and do not import a server database or auth module into a client component. Include one public HTTP healthcheck and no OAuth, unless the user asked otherwise. That healthcheck is a tool at `/mcp`. When the prompt names no page read, it is the only tool.
 
-Include a check that typechecks, tests, and builds. That check does not deploy. The app typecheck covers the app source. When the generated Void config makes that typecheck follow dependencies and fail on missing ambient types, skip that library check in the app config. A loader returns a concrete object for the props its page renders. The app's deploy script prints the Void Cloudflare deploy command the docs name and exits 2. It does not deploy.
+Include a check that typechecks, tests, and builds. That check does not deploy. Install dependencies and run `npx void prepare` before the check. The app typecheck covers the app source. When the generated Void config makes that typecheck follow dependencies and fail on missing ambient types, skip that library check in the app config. A loader returns a concrete object for the props its page renders. The app's deploy script prints the Void Cloudflare deploy command the docs name and exits 2. It does not deploy.
 
 Follow Persistence for `persistence.json`, `.void/project.json`, and the gitignore.
 
@@ -104,7 +104,7 @@ Use this to put one worker version on this computer. The inputs are the worker n
 
 1. Run Prepare. When a grant is missing, write nothing. Return the missing grant and its link.
 2. Read the archive Persistence describes for the key `<worker name>/<version id>`. Unpack it into the destination. The destination must not already contain an app.
-3. Write `.void/project.json` as Persistence describes. Install dependencies from the lockfile.
+3. Write `.void/project.json` as Persistence describes. Install dependencies from the lockfile and run `npx void prepare`.
 4. Return the destination path and the version id. Do not deploy.
 
 ## Deploy
@@ -187,7 +187,7 @@ Score the row the user named. When they did not name one, score the first row wh
 1. Keep `{{dest}}` in the file. When the user did not name a directory, substitute a temporary directory for `{{dest}}` in the prompt you follow.
 2. Follow Plan, then Create. Create follows Extend for every destination, table, and stream that prompt names. Create follows Prepare and Deploy when that prompt asks for a Worker.
 3. When Prepare returns a missing grant, do not write a score. Leave that row empty. Return the missing grant and its link. Leave the directory.
-4. Otherwise follow Validate, then score that app with the Rubric section. A prompt that asks for a Worker is scored from the live worker URL, the live `/mcp` call, the version id from `npx void project status`, and a read of the archive for that version. A prompt that says not to deploy is scored from the source and from the validate return. Rewrite only that row inside the marker block. A row is its points or 0. A rubric row whose capability the prompt does not ask for is full when the app omits that capability too. Usage is `-` unless this turn's summary shows usage. The row names the worker URL and the version id only when this run created them, and it contains no secrets. Do not write a log.
+4. Otherwise follow Validate, then score that app with the Rubric section. A prompt that asks for a Worker is scored from the live worker URL, the live `/mcp` call, the version id from `npx void project status`, and a read of the archive for that version. Send a browser user agent on the live calls. A prompt that says not to deploy is scored from the source and from the validate return. Rewrite only that row inside the marker block. A row is its points or 0. A rubric row whose capability the prompt does not ask for is full when the app omits that capability too. Usage is `-` unless this turn's summary shows usage. The row names the worker URL and the version id only when this run created them, and it contains no secrets. Do not write a log.
 5. Return the row you wrote.
 
 When the user did not name a directory to keep, delete the destination after the row is written. When the row is not written, leave the directory.
