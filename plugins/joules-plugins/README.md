@@ -8,13 +8,13 @@ grok plugin install joules-plugins --trust
 
 Then run `/joules-plugins` with `create`, `evaluate`, `update`, or `score`. On the next session the plugin adds the marketplace URLs in `hooks/marketplaces.txt` and installs the plugins named in `hooks/plugins.txt`. License is MIT, the same terms as the repository `LICENSE`. Network calls are those git URLs, through `grok plugin`, and the docs MCP at the endpoint listed in <https://docs.x.ai/llms.txt>. None of them take a credential.
 
-## Last test run
+## Last run
 
-`tests/run.sh` runs each prompt in `tests/cases/`, saves the raw log under `tests/logs/`, and asks Grok to fill every rubric row from that log. A number is those points. Usage is uncached input tokens, output tokens, turns, and cost when the headless JSON reported them.
+The table between the markers is the run record. Each Prompt cell is the whole job. Nothing else is stored.
 
-<!-- joules-test-status:start -->
+<!-- eval-status:start -->
 | Prompt | When | Result | Load | Job | Procedure | Future-proof | Catalog | Safety | Components | Hosts | Behavior | Usage |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| create-basic-plugin | 2026-10-15T02:04:07Z | pass | 15 | 15 | 15 | 15 | 10 | 10 | 10 | 5 | 5 | 90953 in, 6765 out, 14 turns, $0.13383488 |
-| evaluate-sample-plugin | 2026-10-15T02:01:24Z | pass | 15 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 18547 in, 440 out, 2 turns, $0.0170782 |
-<!-- joules-test-status:end -->
+| /joules-plugins create hello-note Create one plugin at plugins/hello-note. Its only job is a skill that replies with the single word hello. Do only this: - add plugins/hello-note with a manifest, a README, and skills/hello-note/SKILL.md - register hello-note in .grok-plugin/marketplace.json - run grok plugin validate plugins/hello-note Do not open web pages. Do not install, publish, tag, or push. Do not edit any other plugin. If validate exits 0, end with exactly one line: RESULT: pass | 2026-10-15T17:04:29Z | pass | 15 | 15 | 15 | 15 | 10 | 10 | 10 | 5 | 5 | - |
+| /joules-plugins evaluate plugins/sample-note Run `grok plugin validate plugins/sample-note` and no other command. Do not open web pages, do not read the docs index, and do not create or edit any file. Do not install, publish, tag, or push. If that command exits 0, end with exactly one line: RESULT: pass If it does not, end with exactly one line: RESULT: fail | 2026-10-15T17:04:29Z | fail | 15 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | - |
+<!-- eval-status:end -->

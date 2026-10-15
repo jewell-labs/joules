@@ -1,9 +1,0 @@
-{
-  "name": "frozen-model",
-  "version": "0.0.1",
-  "description": "A plugin that states a model id as its contract.",
-  "author": { "name": "Joules" },
-  "license": "MIT",
-  "keywords": ["frozen-model"],
-  "homepage": "https://example.com/frozen-model"
-}

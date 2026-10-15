@@ -32,4 +32,4 @@ Creating fills this matrix after the files exist.
 
 ## Test runs
 
-A test run uses these row names. The runner saves the raw log (the transcript of prompts, tool calls, and tool results, plus the diff and stderr), then a second headless Grok session fills every row from that log. Points are the cell in the matching column, or 0 when the log does not show the row was tested. Evidence is required on every row. A missing row, a point value other than 0 or the cell, or empty evidence fails the run.
+A run is the reply in this turn. Fill every row. A missing row is a fail. Points are the cell in the matching column, or 0. Evidence is the `grok plugin validate` output and a file opened during the turn. State that evidence in the reply. Do not save a transcript, a log, or a score file beside the plugin.

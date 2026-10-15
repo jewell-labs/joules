@@ -1,9 +1,0 @@
-{
-  "name": "sample-note",
-  "version": "0.0.1",
-  "description": "Reply with the single word hello.",
-  "author": { "name": "Joules" },
-  "license": "MIT",
-  "keywords": ["sample-note"],
-  "homepage": "https://example.com/sample-note"
-}

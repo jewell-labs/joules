@@ -2,12 +2,30 @@
   "version": 1,
   "plugins": {
     "joules-plugins": {
-      "version": "0.4.0",
+      "version": "0.5.0",
       "components": {
         "skills": [
           {
             "name": "joules-plugins",
             "description": "Create, evaluate, update, or score one plugin from the current docs."
+          }
+        ],
+        "commands": [
+          {
+            "name": "create",
+            "description": "Create one plugin from the current docs."
+          },
+          {
+            "name": "evaluate",
+            "description": "Score one plugin against the rubric."
+          },
+          {
+            "name": "update",
+            "description": "Edit failed rubric rows and validate again."
+          },
+          {
+            "name": "score",
+            "description": "Report points and the change that raises them most."
           }
         ],
         "mcpServers": [

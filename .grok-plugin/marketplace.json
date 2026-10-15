@@ -9,7 +9,7 @@
       "name": "joules-plugins",
       "description": "Create, evaluate, update, or score one Grok plugin from the current docs and one rubric.",
       "category": "development",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "author": "Joules",
       "homepage": "https://github.com/jewell-labs/joules/tree/main/plugins/joules-plugins",
       "keywords": ["joules", "joules-plugins"],
