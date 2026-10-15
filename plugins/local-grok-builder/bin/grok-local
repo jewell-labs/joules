@@ -1,0 +1,762 @@
+#!/usr/bin/env python3
+"""Discover a local GGUF suite, finish it, and exec the real grok CLI on it.
+
+Field names, the endpoint path, and the server bind defaults are read from the
+custom-models chapter shipped with grok and from `llama-server --help`.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import re
+import shlex
+import shutil
+import socket
+import subprocess
+import sys
+import time
+import urllib.error
+import urllib.request
+from datetime import date
+from pathlib import Path
+
+_BIN = Path(__file__).resolve().parent
+if str(_BIN) not in sys.path:
+    sys.path.insert(0, str(_BIN))
+
+from contract import (  # noqa: E402
+    CHAPTER_ANCHOR,
+    apply_config,
+    hosted_default,
+    is_loopback,
+    loopback_from_config,
+    parse_contract,
+    parse_sections,
+    unquote,
+)
+
+
+def grok_binary():
+    found = shutil.which("grok")
+    if not found:
+        raise SystemExit("grok is not on PATH")
+    return found
+
+
+def chapter_path(explicit=None):
+    """The shipped chapter, found by its anchor heading, not by a file number."""
+    if explicit:
+        path = Path(explicit)
+        if not path.is_file():
+            raise SystemExit("custom-models chapter not found: %s" % path)
+        return path
+    roots = []
+    try:
+        roots.append(Path(grok_binary()).resolve().parent.parent / "docs")
+    except SystemExit:
+        pass
+    roots.append(Path.home() / ".grok" / "docs")
+    matches = []
+    seen = set()
+    for root in roots:
+        if not root.is_dir():
+            continue
+        key = str(root.resolve())
+        if key in seen:
+            continue
+        seen.add(key)
+        for path in sorted(root.rglob("*.md")):
+            try:
+                text = path.read_text(errors="replace")
+            except OSError:
+                continue
+            if CHAPTER_ANCHOR in text and "## Configuring Custom Models" in text:
+                matches.append(path)
+    if not matches:
+        raise SystemExit("custom-models chapter not found beside grok")
+    named = [path for path in matches if "custom-model" in path.name]
+    return named[0] if named else matches[0]
+
+
+def server_help_text(binary):
+    proc = subprocess.run(
+        [binary, "--help"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        check=False,
+    )
+    return proc.stdout or ""
+
+
+def server_defaults(help_text):
+    port_match = re.search(r"--port\b.*?\(default:\s*(\d+)\)", help_text, re.S)
+    host_match = re.search(
+        r"--host\b.*?\(default:\s*([0-9A-Fa-f\.:]+)\)", help_text, re.S
+    )
+    if not port_match or not host_match:
+        raise LookupError("server bind defaults")
+    return host_match.group(1), int(port_match.group(1))
+
+
+def flag_value(argv, names):
+    for index, arg in enumerate(argv):
+        for name in names:
+            if arg == name and index + 1 < len(argv):
+                return argv[index + 1]
+            if arg.startswith(name + "="):
+                return arg.split("=", 1)[1]
+    return None
+
+
+def server_from_argv(argv, pid=None, defaults=None):
+    model = flag_value(argv, ("-m", "--model"))
+    if not model:
+        return None
+    host = flag_value(argv, ("--host",))
+    port = flag_value(argv, ("--port",))
+    if defaults:
+        host = host or defaults[0]
+        port = port or str(defaults[1])
+    if not host or not port:
+        return None
+    try:
+        port_number = int(port)
+    except ValueError:
+        return None
+    alias = flag_value(argv, ("--alias", "-a")) or Path(model).stem
+    ctx_raw = flag_value(argv, ("-c", "--ctx-size"))
+    try:
+        context = int(ctx_raw) if ctx_raw is not None else None
+    except ValueError:
+        context = None
+    return {
+        "argv": list(argv),
+        "pid": pid,
+        "host": host,
+        "port": port_number,
+        "alias": alias,
+        "model_path": model,
+        "context": context,
+        "mmproj": flag_value(argv, ("--mmproj", "-mm")),
+        "binary": argv[0],
+    }
+
+
+def live_servers(defaults):
+    proc = subprocess.run(
+        ["ps", "-axww", "-o", "pid=", "-o", "command="],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+        check=False,
+    )
+    found = []
+    for line in (proc.stdout or "").splitlines():
+        stripped = line.strip()
+        if not stripped or "llama-server" not in stripped:
+            continue
+        pid_text, command = stripped.split(None, 1)
+        if "grok-local" in command:
+            continue
+        try:
+            argv = shlex.split(command)
+        except ValueError:
+            continue
+        if not argv or Path(argv[0]).name != "llama-server":
+            continue
+        item = server_from_argv(argv, pid=int(pid_text), defaults=defaults)
+        if item and is_loopback(item["host"]):
+            found.append(item)
+    return found
+
+
+def port_open(host, port):
+    try:
+        sock = socket.create_connection((host, int(port)), 0.4)
+    except OSError:
+        return False
+    sock.close()
+    return True
+
+
+def read_state(path):
+    if not path or not Path(path).is_file():
+        return {"weights_dir": "", "wanted": [], "servers": []}
+    data = json.loads(Path(path).read_text())
+    data.setdefault("weights_dir", "")
+    data.setdefault("wanted", [])
+    data.setdefault("servers", [])
+    return data
+
+
+def write_text_atomic(path, text):
+    dest = Path(path)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dest.with_name(dest.name + ".partial")
+    tmp.write_text(text)
+    os.replace(tmp, dest)
+
+
+def write_state(path, state):
+    if not path:
+        return
+    write_text_atomic(path, json.dumps(state, indent=2) + "\n")
+
+
+def same_bind(left_host, left_port, right_host, right_port):
+    if int(left_port or 0) != int(right_port or 0):
+        return False
+    return is_loopback(left_host or "") and is_loopback(right_host or "")
+
+
+def list_weights(directory):
+    root = Path(directory)
+    if not root.is_dir():
+        return []
+    files = []
+    for path in sorted(root.iterdir()):
+        if not path.is_file():
+            continue
+        if path.name.startswith(".") or not path.name.endswith(".gguf"):
+            continue
+        files.append({"name": path.name, "path": str(path), "bytes": path.stat().st_size})
+    return files
+
+
+def default_weights(state, servers):
+    """State, or the directory of a model a server already loaded. Never a guessed home folder."""
+    if state.get("weights_dir"):
+        return state["weights_dir"]
+    for server in servers:
+        model = server.get("model_path")
+        if model and Path(model).is_file():
+            return str(Path(model).parent)
+    return ""
+
+
+def discover(weights_dir, config_text, servers, wanted, context_key, prefix="model", id_key="model"):
+    weights = list_weights(weights_dir) if weights_dir else []
+    by_name = {item["name"]: item for item in weights}
+    by_path = {item["path"]: item for item in weights}
+    missing_weights = []
+    for item in wanted:
+        name = item.get("name") or ""
+        path = str(Path(weights_dir) / name) if weights_dir and name else ""
+        if name and name not in by_name and path not in by_path:
+            missing_weights.append({"name": name, "url": item.get("url") or "", "path": path})
+    for server in servers:
+        model = server.get("model_path") or ""
+        if model and not Path(model).is_file():
+            missing_weights.append(
+                {"name": Path(model).name, "url": "", "path": model}
+            )
+    present_servers = []
+    for server in servers:
+        host = server["host"]
+        port = int(server["port"])
+        listening = port_open(host, port)
+        present_servers.append(dict(server, listening=listening))
+    entries = loopback_from_config(config_text, context_key, prefix, id_key)
+    missing_loopback = []
+    for server in present_servers:
+        matched = False
+        for entry in entries:
+            if same_bind(server["host"], server["port"], entry["host"], entry["port"]):
+                matched = True
+                break
+        if not matched:
+            missing_loopback.append(server)
+    missing_servers = []
+    for entry in entries:
+        matched = False
+        for server in present_servers:
+            if same_bind(server["host"], server["port"], entry["host"], entry["port"]):
+                matched = True
+                break
+        if not matched:
+            missing_servers.append(entry)
+    return {
+        "weights_dir": weights_dir,
+        "present_weights": weights,
+        "missing_weights": _unique_weights(missing_weights),
+        "present_servers": present_servers,
+        "missing_servers": missing_servers,
+        "present_loopback": entries,
+        "missing_loopback": missing_loopback,
+    }
+
+
+def _unique_weights(items):
+    seen = set()
+    out = []
+    for item in items:
+        key = item.get("path") or item.get("name")
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(item)
+    return out
+
+
+def render_report(info, selected="", fetched=None, page=""):
+    lines = ["Checked: %s" % date.today().isoformat()]
+    if page:
+        lines.append("Chapter: %s" % page)
+    lines.append("Weights directory: %s" % (info.get("weights_dir") or ""))
+    lines.append("PRESENT weights:")
+    for item in info.get("present_weights") or []:
+        lines.append("- %s (%s bytes) %s" % (item["name"], item["bytes"], item["path"]))
+    lines.append("PRESENT server:")
+    for server in info.get("present_servers") or []:
+        state = "listening" if server.get("listening") else "recorded"
+        lines.append(
+            "- %s %s:%s alias=%s model=%s context=%s"
+            % (
+                state,
+                server["host"],
+                server["port"],
+                server.get("alias") or "",
+                server.get("model_path") or "",
+                server.get("context") if server.get("context") is not None else "",
+            )
+        )
+    lines.append("PRESENT loopback:")
+    for entry in info.get("present_loopback") or []:
+        lines.append(
+            "- %s %s context=%s"
+            % (entry["key"], entry["endpoint"], entry["context"] if entry["context"] is not None else "")
+        )
+    lines.append("MISSING weights:")
+    for item in info.get("missing_weights") or []:
+        lines.append("- %s %s" % (item["name"], item.get("path") or ""))
+    lines.append("MISSING server:")
+    for entry in info.get("missing_servers") or []:
+        lines.append("- %s %s:%s" % (entry["key"], entry["host"], entry["port"]))
+    lines.append("MISSING loopback:")
+    for server in info.get("missing_loopback") or []:
+        lines.append(
+            "- %s:%s alias=%s model=%s"
+            % (server["host"], server["port"], server.get("alias") or "", server.get("model_path") or "")
+        )
+    lines.append("FETCHED:")
+    for item in fetched or []:
+        lines.append("- %s (%s bytes) source-bytes=%s" % (item["path"], item["bytes"], item["source_bytes"]))
+    lines.append("SELECTED: %s" % (selected or ""))
+    return "\n".join(lines) + "\n"
+
+
+def download(url, dest):
+    dest = Path(dest)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    request = urllib.request.Request(url, headers={"User-Agent": "local-grok-builder"})
+    try:
+        response = urllib.request.urlopen(request, timeout=120)
+    except urllib.error.URLError:
+        raise SystemExit("download failed for %s" % dest.name)
+    with response:
+        expected = response.headers.get("Content-Length")
+        tmp = dest.with_name(dest.name + ".partial")
+        written = 0
+        try:
+            with tmp.open("wb") as handle:
+                while True:
+                    chunk = response.read(256 * 1024)
+                    if not chunk:
+                        break
+                    handle.write(chunk)
+                    written += len(chunk)
+        except Exception:
+            if tmp.exists():
+                tmp.unlink()
+            raise
+        if expected is not None and int(expected) != written:
+            tmp.unlink()
+            raise SystemExit(
+                "size mismatch for %s: wrote %s, source said %s" % (dest.name, written, expected)
+            )
+        if written < 4:
+            tmp.unlink()
+            raise SystemExit("download was empty: %s" % dest.name)
+        head = tmp.read_bytes()[:4]
+        if dest.suffix == ".gguf" and head != b"GGUF":
+            tmp.unlink()
+            raise SystemExit("download is not a GGUF file: %s" % dest.name)
+        if head.lower().startswith(b"<htm") or head.startswith(b"<!DO") or head.startswith(b"<!do"):
+            tmp.unlink()
+            raise SystemExit("download was a document, not the weight: %s" % dest.name)
+        os.replace(tmp, dest)
+        return written, int(expected) if expected is not None else written
+
+
+def fetch_context(host, port, endpoint_path):
+    path = (endpoint_path or "").rstrip("/")
+    url = "http://%s:%s%s/models" % (host, port, path)
+    try:
+        request = urllib.request.Request(url, headers={"User-Agent": "local-grok-builder"})
+        with urllib.request.urlopen(request, timeout=3) as response:
+            payload = json.loads(response.read().decode("utf-8", "replace"))
+    except (OSError, ValueError, urllib.error.URLError):
+        return None
+    return _find_n_ctx(payload)
+
+
+def _find_n_ctx(value):
+    if isinstance(value, dict):
+        ctx = value.get("n_ctx")
+        if isinstance(ctx, int) and ctx > 0:
+            return ctx
+        for child in value.values():
+            found = _find_n_ctx(child)
+            if found:
+                return found
+    elif isinstance(value, list):
+        for child in value:
+            found = _find_n_ctx(child)
+            if found:
+                return found
+    return None
+
+
+def llama_binary(servers):
+    for server in servers:
+        binary = server.get("binary")
+        if binary and Path(binary).exists() and "llama-server" in Path(binary).name:
+            return binary
+    found = shutil.which("llama-server")
+    if not found:
+        raise SystemExit("llama-server is not on PATH")
+    return found
+
+
+def ensure_listening(server, log_path, endpoint_path):
+    if port_open(server["host"], server["port"]):
+        server["listening"] = True
+        return server
+    argv = server.get("argv")
+    if not argv:
+        raise SystemExit("no server command for %s:%s" % (server["host"], server["port"]))
+    log_path = Path(log_path)
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    handle = log_path.open("ab")
+    subprocess.Popen(
+        argv,
+        stdout=handle,
+        stderr=handle,
+        start_new_session=True,
+    )
+    for _ in range(120):
+        if port_open(server["host"], server["port"]):
+            server["listening"] = True
+            return server
+        if endpoint_path and fetch_context(server["host"], server["port"], endpoint_path) is not None:
+            server["listening"] = True
+            return server
+        time.sleep(0.25)
+    raise SystemExit("server did not listen on %s:%s" % (server["host"], server["port"]))
+
+
+def build_argv(binary, model_path, host, port, alias, context):
+    argv = [
+        binary,
+        "--model",
+        model_path,
+        "--host",
+        host,
+        "--port",
+        str(port),
+        "--alias",
+        alias,
+    ]
+    if context:
+        argv.extend(["-c", str(context)])
+    return argv
+
+
+def free_port(host):
+    sock = socket.socket()
+    sock.bind((host, 0))
+    port = sock.getsockname()[1]
+    sock.close()
+    return port
+
+
+def collect_servers(state, defaults, include_live=True):
+    servers = []
+    seen = set()
+    if include_live:
+        for item in live_servers(defaults):
+            key = (item["host"], int(item["port"]), item["model_path"])
+            seen.add((item["host"], int(item["port"])))
+            servers.append(item)
+    for raw in state.get("servers") or []:
+        argv = raw.get("argv") or []
+        item = server_from_argv(argv, defaults=defaults)
+        if not item or not is_loopback(item["host"]):
+            continue
+        bind = (item["host"], int(item["port"]))
+        if bind in seen:
+            continue
+        seen.add(bind)
+        servers.append(item)
+    return servers
+
+
+def choose(info):
+    """Listening text server with the largest weight. Recorded-only is the fallback."""
+    candidates = []
+    entries = info.get("present_loopback") or []
+    for server in info.get("present_servers") or []:
+        if not server.get("listening") and not server.get("argv"):
+            continue
+        size = 0
+        model = server.get("model_path") or ""
+        if model and Path(model).is_file():
+            size = Path(model).stat().st_size
+        bound = None
+        for entry in entries:
+            if same_bind(server["host"], server["port"], entry["host"], entry["port"]):
+                bound = entry
+                break
+        candidates.append((server, bound, size))
+    if not candidates:
+        return ""
+    listening = [item for item in candidates if item[0].get("listening")]
+    pool = listening or candidates
+    text = [item for item in pool if not item[0].get("mmproj")]
+    pool = text or pool
+    pool.sort(key=lambda item: item[2], reverse=True)
+    server, entry, _size = pool[0]
+    if entry:
+        return entry["key"]
+    return server.get("alias") or ""
+
+
+def resolve_context(server, endpoint_path):
+    live = fetch_context(server["host"], server["port"], endpoint_path)
+    if live:
+        return live
+    if server.get("context"):
+        return int(server["context"])
+    raise SystemExit(
+        "context is unknown for %s:%s; the server did not report one" % (server["host"], server["port"])
+    )
+
+
+def load_inputs(opts, defaults):
+    state_path = opts.get("state") or str(Path.home() / ".grok" / "local-suite.json")
+    config_path = opts.get("config") or str(Path.home() / ".grok" / "config.toml")
+    state = read_state(state_path)
+    servers = collect_servers(state, defaults, include_live=opts.get("live", True))
+    weights = opts.get("weights") or default_weights(state, servers)
+    wanted = list(state.get("wanted") or [])
+    if opts.get("fetch") and opts.get("name"):
+        wanted.append({"name": opts["name"], "url": opts["fetch"]})
+    config_file = Path(config_path)
+    config_text = config_file.read_text() if config_file.is_file() else ""
+    return {
+        "state_path": state_path,
+        "config_path": config_path,
+        "state": state,
+        "servers": servers,
+        "weights": weights,
+        "wanted": wanted,
+        "config_text": config_text,
+    }
+
+
+def setup(opts, contract, defaults):
+    inputs = load_inputs(opts, defaults)
+    weights = inputs["weights"]
+    if not weights:
+        raise SystemExit("weights directory is unknown")
+    Path(weights).mkdir(parents=True, exist_ok=True)
+    fetched = []
+    wanted = inputs["wanted"]
+    for item in wanted:
+        name = item.get("name")
+        url = item.get("url")
+        if not name or not url:
+            continue
+        dest = Path(weights) / name
+        if dest.is_file() and dest.stat().st_size > 0:
+            continue
+        written, source_bytes = download(url, dest)
+        fetched.append({"path": str(dest), "bytes": written, "source_bytes": source_bytes})
+    # A server whose model path was missing can now see the file.
+    servers = inputs["servers"]
+    if not servers:
+        ggufs = [
+            item
+            for item in list_weights(weights)
+            if item["name"].endswith(".gguf") and "mmproj" not in item["name"]
+        ]
+        if ggufs:
+            chosen = max(ggufs, key=lambda item: item["bytes"])
+            binary = llama_binary(servers)
+            host = defaults[0]
+            port = free_port(host)
+            alias = Path(chosen["name"]).stem
+            argv = build_argv(binary, chosen["path"], host, port, alias, None)
+            servers = [server_from_argv(argv, defaults=defaults)]
+    log_path = opts.get("log") or str(Path.home() / ".grok" / "local-server.log")
+    started = []
+    for server in servers:
+        model = server.get("model_path") or ""
+        if model and not Path(model).is_file():
+            continue
+        if not port_open(server["host"], server["port"]):
+            server = ensure_listening(server, log_path, contract["endpoint_path"])
+        server["context"] = resolve_context(server, contract["endpoint_path"])
+        started.append(server)
+    text = inputs["config_text"]
+    before_default = hosted_default(text)
+    for server in started:
+        text = apply_config(text, contract, server, server["context"])
+    after_default = hosted_default(text)
+    if before_default != after_default:
+        raise SystemExit("hosted default changed")
+    if text != inputs["config_text"]:
+        write_text_atomic(inputs["config_path"], text)
+    state = {
+        "weights_dir": weights,
+        "wanted": [
+            {"name": item["name"], "url": item["url"]}
+            for item in wanted
+            if item.get("name") and item.get("url")
+        ],
+        "servers": [{"argv": server["argv"]} for server in started if server.get("argv")],
+    }
+    write_state(inputs["state_path"], state)
+    info = discover(
+        weights,
+        text,
+        started,
+        [],
+        contract["context_key"],
+        contract["prefix"],
+        contract["id_key"],
+    )
+    # Wanted files that are now on disk must not be missing.
+    selected = choose(info)
+    info["hosted_default"] = after_default
+    return info, selected, fetched
+
+
+def discover_only(opts, contract, defaults):
+    inputs = load_inputs(opts, defaults)
+    roles = contract or {}
+    info = discover(
+        inputs["weights"],
+        inputs["config_text"],
+        inputs["servers"],
+        inputs["wanted"],
+        roles.get("context_key"),
+        roles.get("prefix", "model"),
+        roles.get("id_key", "model"),
+    )
+    return info, choose(info)
+
+
+def ensure_link():
+    try:
+        dest_dir = Path(grok_binary()).parent
+    except SystemExit:
+        return
+    dest = dest_dir / "grok-local"
+    src = Path(__file__).resolve()
+    if dest.resolve() == src:
+        return
+    if dest.is_symlink() or not dest.exists():
+        if dest.is_symlink() or dest.exists():
+            if dest.exists() and dest.resolve() == src:
+                return
+            dest.unlink()
+        dest.symlink_to(src)
+
+
+def split_cli(argv):
+    args = argv[1:]
+    mode = "launch"
+    if args and args[0] in ("discover", "setup"):
+        mode = args[0]
+        args = args[1:]
+    opts = {"live": True}
+    extra = []
+    index = 0
+    valued = {
+        "--config": "config",
+        "--weights": "weights",
+        "--state": "state",
+        "--chapter": "chapter",
+        "--grok-bin": "grok_bin",
+        "--fetch": "fetch",
+        "--name": "name",
+        "--log": "log",
+    }
+    while index < len(args):
+        arg = args[index]
+        if arg == "--no-live":
+            opts["live"] = False
+            index += 1
+            continue
+        if arg in valued:
+            if index + 1 >= len(args):
+                raise SystemExit("missing value for %s" % arg)
+            opts[valued[arg]] = args[index + 1]
+            index += 2
+            continue
+        if arg == "--":
+            extra.extend(args[index + 1 :])
+            break
+        extra.append(arg)
+        index += 1
+    return mode, opts, extra
+
+
+def grok_command(binary, model_key, extra):
+    if "-m" in extra or "--model" in extra:
+        return [binary, *extra]
+    return [binary, "-m", model_key, *extra]
+
+
+def main(argv):
+    mode, opts, extra = split_cli(argv)
+    binary = llama_binary([])
+    defaults = server_defaults(server_help_text(binary))
+    page = ""
+    contract = None
+    try:
+        page_path = chapter_path(opts.get("chapter"))
+        page = str(page_path)
+        contract = parse_contract(page_path.read_text())
+    except (SystemExit, LookupError) as exc:
+        if mode != "discover":
+            raise
+        sys.stderr.write("PAGE missing: %s\n" % exc)
+    if mode == "discover":
+        info, selected = discover_only(opts, contract, defaults)
+        sys.stdout.write(render_report(info, selected=selected, page=page))
+        return 0
+    if contract is None:
+        raise SystemExit("PAGE missing")
+    info, selected, fetched = setup(opts, contract, defaults)
+    if mode == "setup":
+        sys.stdout.write(render_report(info, selected=selected, fetched=fetched, page=page))
+        ensure_link()
+        return 0
+    if not selected:
+        sys.stdout.write(render_report(info, selected="", fetched=fetched, page=page))
+        raise SystemExit("no local model is selected")
+    ensure_link()
+    grok = opts.get("grok_bin") or grok_binary()
+    command = grok_command(grok, selected, extra)
+    os.execv(command[0], command)
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main(sys.argv) or 0)
+    except BrokenPipeError:
+        sys.exit(0)
