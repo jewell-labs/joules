@@ -153,10 +153,36 @@ if "environment:" in check:
     sys.exit(1)
 if "environment: release" not in deploy:
     sys.exit(1)
-if "worker-dist" not in text or ".wrangler/deploy/config.json" not in text:
-    sys.exit(1)
 if "npm run build" in deploy or "release.sh check" in deploy:
     sys.exit(1)
+
+def before_deploy(body, step):
+    steps = steps_of(body)
+    deploy_at = [i for i, item in enumerate(steps) if "scripts/release.sh deploy" in item]
+    found = [i for i, item in enumerate(steps) if item == step]
+    if len(deploy_at) != 1 or len(found) != 1 or found[0] >= deploy_at[0]:
+        sys.exit(1)
+
+def exact_line(step, line):
+    if line not in [item.strip() for item in step.splitlines()]:
+        sys.exit(1)
+
+worker_up = step_with(check, "name: worker-dist")
+redirect_up = step_with(check, "name: wrangler-redirect")
+if "upload-artifact" not in worker_up or "upload-artifact" not in redirect_up:
+    sys.exit(1)
+exact_line(worker_up, "path: dist")
+exact_line(redirect_up, "path: .wrangler/deploy/config.json")
+if "include-hidden-files: true" not in redirect_up:
+    sys.exit(1)
+worker_dl = step_with(deploy, "name: worker-dist")
+redirect_dl = step_with(deploy, "name: wrangler-redirect")
+if "download-artifact" not in worker_dl or "download-artifact" not in redirect_dl:
+    sys.exit(1)
+exact_line(worker_dl, "path: dist")
+exact_line(redirect_dl, "path: .wrangler/deploy")
+before_deploy(deploy, worker_dl)
+before_deploy(deploy, redirect_dl)
 deploy_step = step_with(deploy, "scripts/release.sh deploy")
 notify_step = step_with(deploy, "scripts/release.sh notify")
 if "DEPLOY_WEBHOOK_URL" in deploy_step:

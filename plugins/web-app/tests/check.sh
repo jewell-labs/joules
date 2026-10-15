@@ -67,8 +67,28 @@ grep -q 'concurrency:' "$root/.github/workflows/release.yml" || say "workflow ha
 grep -q 'skip deploy' "$root/.github/workflows/release.yml" || say "unlisted branch has no skip step"
 grep -q 'environment: release' "$root/.github/workflows/release.yml" || say "deploy jobs do not reference the GitHub Environment"
 [ "$(grep -c 'environment: release' "$root/.github/workflows/release.yml")" -eq 1 ] || say "release environment is not only on the deploy job"
-grep -q 'name: worker-dist' "$root/.github/workflows/release.yml" || say "deploy job does not receive the worker build"
-grep -q '.wrangler/deploy/config.json' "$root/.github/workflows/release.yml" || say "deploy job does not receive the Wrangler redirect"
+check_job=$(sed -n '/^  check:/,/^  deploy:/p' "$root/.github/workflows/release.yml")
+deploy_job=$(sed -n '/^  deploy:/,$p' "$root/.github/workflows/release.yml")
+printf '%s\n' "$check_job" | grep -q 'name: worker-dist' || say "check job does not upload the worker build"
+printf '%s\n' "$check_job" | grep -q 'name: wrangler-redirect' || say "check job does not upload the Wrangler redirect"
+printf '%s\n' "$check_job" | grep -q 'path: .wrangler/deploy/config.json' || say "check job does not upload the Wrangler redirect"
+printf '%s\n' "$check_job" | grep -q 'include-hidden-files: true' || say "check job omits include-hidden-files on the Wrangler redirect"
+printf '%s\n' "$deploy_job" | grep -q 'download-artifact' || say "deploy job does not download the build"
+printf '%s\n' "$deploy_job" | grep -q 'name: worker-dist' || say "deploy job does not download the worker build"
+printf '%s\n' "$deploy_job" | grep -q 'name: wrangler-redirect' || say "deploy job does not download the Wrangler redirect"
+printf '%s\n' "$deploy_job" | grep -q 'path: \.wrangler/deploy$' || say "deploy job does not place the Wrangler redirect"
+deploy_order=$(printf '%s\n' "$deploy_job" | awk '
+  /name: worker-dist/ { dist = NR }
+  /name: wrangler-redirect/ { redir = NR }
+  $0 ~ /path: \.wrangler\/deploy$/ { place = NR }
+  /path: dist$/ { distdir = NR }
+  /scripts\/release.sh deploy/ && !deploy { deploy = NR }
+  END {
+    if (dist && redir && place && distdir && deploy && dist < deploy && redir < deploy && place < deploy && distdir < deploy)
+      print "ok"
+  }
+')
+[ "$deploy_order" = ok ] || say "deploy job does not download the build and the redirect before deploy"
 grep -q '"deploy": "sh scripts/release.sh"' "$root/package.json" || say "npm run deploy skips the branch map"
 grep -q 'branch not in data' "$root/scripts/branch-env.sh" || say "a listed branch with a bad environment can skip"
 grep -q 'version##\*+' "$root/scripts/release.sh" || say "deploy tag does not use the last plus"

@@ -55,23 +55,21 @@ ignored_credential() {
   fi
   return 0
 }
-mark=$(mktemp "${TMPDIR:-/tmp}/joules-verify.XXXXXX")
-find . \
-  \( -name node_modules -o -name dist -o -name .wrangler -o -name .output -o -name .git -o -name screenshots \) -prune \
-  -o -type f -print |
-while IFS= read -r file; do
+# A pipe would run the loop in a subshell, so a match could not exit this script.
+while IFS= read -r file || [ -n "$file" ]; do
+  if [ -z "$file" ]; then
+    continue
+  fi
   if ignored_credential "$file"; then
     continue
   fi
   if grep -I -q -E "$pat" "$file" 2>/dev/null; then
-    echo 1 > "$mark"
-    break
+    echo "a secret is in the tree" >&2
+    exit 1
   fi
-done
-if [ -s "$mark" ]; then
-  rm -f "$mark"
-  echo "a secret is in the tree" >&2
-  exit 1
-fi
-rm -f "$mark"
+done <<EOF
+$(find . \
+  \( -name node_modules -o -name dist -o -name .wrangler -o -name .output -o -name .git -o -name screenshots \) -prune \
+  -o -type f -print)
+EOF
 echo ok
