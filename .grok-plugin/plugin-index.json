@@ -80,6 +80,12 @@
             "name": "evaluate",
             "description": "Score one README prompt and write that row."
           }
+        ],
+        "lspServers": [
+          {
+            "name": "typescript",
+            "description": "TypeScript language server for .ts and .tsx."
+          }
         ]
       }
     },
