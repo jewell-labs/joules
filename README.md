@@ -21,12 +21,6 @@ grok plugin install joules-plugins --trust
 
 `hello-note` and `sample-note` are fixtures named by the joules-plugins run record. The hello-note skill path repeats the plugin name because that prompt requires `skills/hello-note/SKILL.md`.
 
-## Apps
-
-| App | What it shows |
-| --- | --- |
-| [jev-classify](apps/jev-classify) | A lay page that asks Clef which local model should take a prompt, and draws that decision as nodes. It is not a plugin. |
-
 ## Add a plugin
 
 Search the official catalog first. Then `/author` with `create`, `evaluate`, `update`, or `score`. `grok plugin validate plugins/<name>` is the manifest check. After you ask to install, `grok inspect` and `/author` on a safe input are the behavior check. Each plugin README has the capability roadmap and the run record from the Records section of `plugins/joules-plugins/skills/author/SKILL.md`. The prompt in the run record is the whole job. Evaluate writes the scores.
@@ -44,7 +38,6 @@ AGENTS.md                            rules for agents in this repo
 .grok-plugin/marketplace.json        catalog Grok reads
 .grok-plugin/plugin-index.json       component list shown before install
 plugins/<name>/                      one plugin, the public parent
-apps/<name>/                         one app, not a plugin
 ```
 
 A plugin name is the parent a person installs. A skill or command inside it is named for its job, not for the plugin. The rule is in [AGENTS.md](AGENTS.md).
