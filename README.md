@@ -23,7 +23,7 @@ grok plugin install joules-plugins --trust
 
 | App | What it shows |
 | --- | --- |
-| [jev-classify](apps/jev-classify) | A lay page for Jev-based classification. It compares a live local Clef decision with a live local Grok reply. It is not a plugin. |
+| [jev-classify](apps/jev-classify) | A lay page that asks Clef which local model should take a prompt, and draws that decision as nodes. It is not a plugin. |
 
 ## Add a plugin
 
