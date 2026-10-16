@@ -548,6 +548,429 @@ class LocalSuiteTest(unittest.TestCase):
                     except (OSError, ValueError):
                         pass
 
+    def test_list_weights_includes_subdirectories_and_skips_projectors(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "top.gguf").write_bytes(b"GGUF-top")
+            plain = root / "notes"
+            plain.mkdir()
+            (plain / "plain.gguf").write_bytes(b"GGUF-plain")
+            vision = root / "vision"
+            vision.mkdir()
+            (vision / "vision-text.gguf").write_bytes(b"GGUF-vision")
+            (vision / "mmproj-Q8_0.gguf").write_bytes(b"GGUF-proj")
+            hidden = root / ".hidden"
+            hidden.mkdir()
+            (hidden / "secret.gguf").write_bytes(b"GGUF-secret")
+            (root / ".dot.gguf").write_bytes(b"GGUF-dot")
+            names = [item["name"] for item in self.mod.list_weights(root)]
+            self.assertEqual(
+                names, ["notes/plain.gguf", "top.gguf", "vision/vision-text.gguf"]
+            )
+            ids = self.mod.weight_ids(root)
+            self.assertIn("top", ids)
+            self.assertIn("plain", ids)
+            self.assertIn("vision-text", ids)
+            self.assertIn("vision", ids)
+            self.assertNotIn("notes", ids)
+            self.assertNotIn("secret", ids)
+
+    def test_default_weights_uses_the_router_directory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            weights = Path(tmp)
+            model = weights / "kept.gguf"
+            model.write_bytes(b"GGUF")
+            self.assertEqual(
+                self.mod.default_weights(
+                    {"weights_dir": ""},
+                    [{"models_dir": str(weights), "model_path": ""}],
+                ),
+                str(weights),
+            )
+            self.assertEqual(
+                self.mod.default_weights({}, [{"model_path": str(model)}]),
+                str(weights),
+            )
+            self.assertEqual(
+                self.mod.contexts_by_id({"data": [{"id": "kept", "context_length": 262144}]}),
+                {},
+            )
+            self.assertEqual(
+                self.mod.contexts_by_id(
+                    {"data": [{"id": "kept", "context_length": 262144, "meta": {"n_ctx": 50}}]}
+                )["kept"],
+                50,
+            )
+            self.assertEqual(
+                self.mod.contexts_by_id(
+                    {"data": [{"id": "kept", "n_ctx": 40, "context_length": 262144}]}
+                )["kept"],
+                40,
+            )
+
+    def test_models_dir_router_is_the_server_and_a_saved_model_flag_is_not(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            weights = Path(tmp)
+            kept = weights / "kept.gguf"
+            kept.write_bytes(b"GGUF-kept")
+            router = self.mod.server_from_argv(
+                [
+                    "llama-server",
+                    "--host",
+                    "127.0.0.1",
+                    "--port",
+                    "8080",
+                    "--models-dir",
+                    str(weights),
+                ],
+                pid=4,
+                defaults=self.defaults,
+            )
+            self.assertIsNotNone(router)
+            self.assertTrue(router["router"])
+            self.assertEqual(router["model_path"], "")
+            self.assertIsNone(
+                self.mod.server_from_argv(
+                    ["llama-server", "--host", "127.0.0.1", "--port", "8080"],
+                    defaults=self.defaults,
+                )
+            )
+            saved = {
+                "servers": [
+                    {
+                        "argv": [
+                            self.mod.llama_binary([]),
+                            "-m",
+                            str(kept),
+                            "--host",
+                            "127.0.0.1",
+                            "--port",
+                            "8080",
+                            "--alias",
+                            "kept",
+                        ]
+                    }
+                ]
+            }
+            assembled = self.mod.assemble_servers(saved, self.defaults, [router])
+            self.assertEqual(len(assembled), 1)
+            self.assertTrue(assembled[0]["router"])
+            gone = {
+                "servers": [
+                    {
+                        "argv": [
+                            self.mod.llama_binary([]),
+                            "-m",
+                            str(weights / "gone.gguf"),
+                            "--host",
+                            "127.0.0.1",
+                            "--port",
+                            "8081",
+                            "--alias",
+                            "gone",
+                        ]
+                    }
+                ]
+            }
+            self.assertEqual(self.mod.assemble_servers(gone, self.defaults, []), [])
+
+    def test_down_router_is_started_and_each_file_is_wired(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            weights = tmp / "weights"
+            weights.mkdir()
+            (weights / "kept.gguf").write_bytes(b"GGUF" + b"k" * 32)
+            config = tmp / "config.toml"
+            config.write_text(
+                '[models]\ndefault = "kept-hosted"\n\n[%s.gone-id]\n%s = "gone-id"\n%s = "http://127.0.0.1:9%s"\n%s = "gone-id"\n%s = 32\n%s = ""\n'
+                % (
+                    self.contract["prefix"],
+                    self.contract["id_key"],
+                    self.contract["endpoint_key"],
+                    self.contract["endpoint_path"],
+                    self.contract["name_key"],
+                    self.contract["context_key"],
+                    self.contract["credential_key"],
+                )
+            )
+            sock = socket.socket()
+            sock.bind(("127.0.0.1", 0))
+            port = sock.getsockname()[1]
+            sock.close()
+            state = tmp / "state.json"
+            state.write_text(
+                json.dumps(
+                    {
+                        "weights_dir": str(weights),
+                        "wanted": [{"name": "stories.gguf", "url": "http://127.0.0.1:9/stories.gguf"}],
+                        "servers": [
+                            {
+                                "argv": [
+                                    "llama-server",
+                                    "--host",
+                                    "127.0.0.1",
+                                    "--port",
+                                    str(port),
+                                    "--models-dir",
+                                    str(weights),
+                                ]
+                            }
+                        ],
+                    }
+                )
+            )
+            bind_dir = tmp / "bin"
+            bind_dir.mkdir()
+            fake_server = bind_dir / "llama-server"
+            fake_server.write_text(FAKE_LLAMA)
+            fake_server.chmod(0o755)
+            record = tmp / "llama-argv.jsonl"
+            pid_path = tmp / "llama.pid"
+            env = os.environ.copy()
+            env["PATH"] = str(bind_dir) + os.pathsep + env.get("PATH", "")
+            env["FAKE_LLAMA_RECORD"] = str(record)
+            env["FAKE_LLAMA_PID"] = str(pid_path)
+            try:
+                proc = subprocess.run(
+                    [
+                        str(LAUNCHER),
+                        "setup",
+                        "--no-live",
+                        "--weights",
+                        str(weights),
+                        "--config",
+                        str(config),
+                        "--state",
+                        str(state),
+                        "--log",
+                        str(tmp / "server.log"),
+                    ],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    check=False,
+                    env=env,
+                )
+                if proc.returncode != 0:
+                    self.fail("grok-local -> %s\n%s\n%s" % (proc.returncode, proc.stdout, proc.stderr))
+                argv = json.loads(record.read_text().splitlines()[-1])
+                self.assertIn("--models-dir", argv)
+                self.assertNotIn("--model", argv)
+                self.assertNotIn("-m", argv)
+                written = config.read_text()
+                self.assertIn("kept", written)
+                self.assertNotIn("gone-id", written)
+                self.assertIn("32768", written)
+                self.assertNotIn("262144", written)
+                self.assertEqual(self.mod.hosted_default(written), "kept-hosted")
+                saved = json.loads(state.read_text())
+                self.assertEqual(saved.get("wanted") or [], [])
+                self.assertIn("--models-dir", saved["servers"][0]["argv"])
+                self.assertFalse((weights / "stories.gguf").exists())
+            finally:
+                if pid_path.is_file():
+                    try:
+                        os.kill(int(pid_path.read_text().strip()), signal.SIGTERM)
+                    except (OSError, ValueError):
+                        pass
+
+    def test_router_context_uses_n_ctx_not_context_length(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            weights = tmp / "weights"
+            weights.mkdir()
+            (weights / "kept.gguf").write_bytes(b"GGUF" + b"k" * 32)
+            config = tmp / "config.toml"
+            config.write_text('[models]\ndefault = "kept-hosted"\n')
+            sock = socket.socket()
+            sock.bind(("127.0.0.1", 0))
+            port = sock.getsockname()[1]
+            sock.close()
+            state = tmp / "state.json"
+            state.write_text(
+                json.dumps(
+                    {
+                        "weights_dir": str(weights),
+                        "wanted": [],
+                        "servers": [
+                            {
+                                "argv": [
+                                    "llama-server",
+                                    "--host",
+                                    "127.0.0.1",
+                                    "--port",
+                                    str(port),
+                                    "--models-dir",
+                                    str(weights),
+                                ]
+                            }
+                        ],
+                    }
+                )
+            )
+            bind_dir = tmp / "bin"
+            bind_dir.mkdir()
+            fake_server = bind_dir / "llama-server"
+            fake_server.write_text(FAKE_LLAMA)
+            fake_server.chmod(0o755)
+            models = tmp / "models.json"
+            models.write_text(json.dumps({"data": [{"id": "kept", "context_length": 262144}]}))
+            record = tmp / "llama-argv.jsonl"
+            pid_path = tmp / "llama.pid"
+            env = os.environ.copy()
+            env["PATH"] = str(bind_dir) + os.pathsep + env.get("PATH", "")
+            env["FAKE_LLAMA_RECORD"] = str(record)
+            env["FAKE_LLAMA_PID"] = str(pid_path)
+            env["FAKE_LLAMA_MODELS"] = str(models)
+            args = [
+                str(LAUNCHER),
+                "setup",
+                "--no-live",
+                "--weights",
+                str(weights),
+                "--config",
+                str(config),
+                "--state",
+                str(state),
+                "--log",
+                str(tmp / "server.log"),
+            ]
+
+            def run_setup():
+                proc = subprocess.run(
+                    args,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    check=False,
+                    env=env,
+                )
+                if proc.returncode != 0:
+                    self.fail("grok-local -> %s\n%s\n%s" % (proc.returncode, proc.stdout, proc.stderr))
+
+            try:
+                run_setup()
+                written = config.read_text()
+                self.assertIn("32768", written)
+                self.assertNotIn("262144", written)
+                self.assertEqual(self.mod.hosted_default(written), "kept-hosted")
+                models.write_text(
+                    json.dumps({"data": [{"id": "kept", "context_length": 262144, "meta": {"n_ctx": 9000}}]})
+                )
+                run_setup()
+                written = config.read_text()
+                self.assertIn("9000", written)
+                self.assertNotIn("32768", written)
+                self.assertNotIn("262144", written)
+                models.write_text(json.dumps({"data": [{"id": "kept", "context_length": 262144}]}))
+                run_setup()
+                written = config.read_text()
+                self.assertIn("9000", written)
+                self.assertNotIn("262144", written)
+                self.assertNotIn("32768", written)
+            finally:
+                if pid_path.is_file():
+                    try:
+                        os.kill(int(pid_path.read_text().strip()), signal.SIGTERM)
+                    except (OSError, ValueError):
+                        pass
+
+    def test_setup_does_not_download_a_missing_wanted_name(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            weights = tmp / "weights"
+            weights.mkdir()
+            kept = weights / "kept.gguf"
+            kept.write_bytes(b"GGUF-kept")
+            port = self._listen(tmp)
+            config = tmp / "config.toml"
+            config.write_text('[models]\ndefault = "kept-hosted"\n')
+            state = tmp / "state.json"
+            state.write_text(
+                json.dumps(
+                    {
+                        "weights_dir": str(weights),
+                        "wanted": [
+                            {
+                                "name": "stories.gguf",
+                                "url": "http://127.0.0.1:9/stories.gguf",
+                            }
+                        ],
+                        "servers": [
+                            {
+                                "argv": [
+                                    self.mod.llama_binary([]),
+                                    "--model",
+                                    str(kept),
+                                    "--host",
+                                    "127.0.0.1",
+                                    "--port",
+                                    str(port),
+                                    "--alias",
+                                    "kept",
+                                    "-c",
+                                    "128",
+                                ]
+                            }
+                        ],
+                    }
+                )
+            )
+            report = self._run(
+                [
+                    "setup",
+                    "--no-live",
+                    "--weights",
+                    str(weights),
+                    "--config",
+                    str(config),
+                    "--state",
+                    str(state),
+                    "--log",
+                    str(tmp / "server.log"),
+                ]
+            )
+            self.assertFalse((weights / "stories.gguf").exists())
+            self.assertNotIn("stories.gguf", report)
+            saved = json.loads(state.read_text())
+            self.assertEqual(saved.get("wanted") or [], [])
+            self.assertEqual(self.mod.hosted_default(config.read_text()), "kept-hosted")
+
+    def test_apply_config_drops_a_loopback_id_with_no_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "kept.gguf").write_bytes(b"GGUF-kept")
+            prefix = self.contract["prefix"]
+
+            def block(alias):
+                return (
+                    "[%s.%s]\n%s = \"%s\"\n%s = \"http://127.0.0.1:9%s\"\n%s = \"%s\"\n%s = 32\n%s = \"\"\n"
+                    % (
+                        prefix,
+                        alias,
+                        self.contract["id_key"],
+                        alias,
+                        self.contract["endpoint_key"],
+                        self.contract["endpoint_path"],
+                        self.contract["name_key"],
+                        alias,
+                        self.contract["context_key"],
+                        self.contract["credential_key"],
+                    )
+                )
+
+            text = '[models]\ndefault = "kept-hosted"\n\n' + block("kept") + "\n" + block("gone-id")
+            updated = self.mod.apply_config(
+                text,
+                self.contract,
+                {"alias": "", "host": "127.0.0.1", "port": 9},
+                None,
+                set(self.mod.weight_ids(root)),
+            )
+            self.assertIn("kept", updated)
+            self.assertNotIn("gone-id", updated)
+            self.assertEqual(self.mod.hosted_default(updated), "kept-hosted")
+
     def _port_open(self, host, port):
         try:
             sock = socket.create_connection((host, int(port)), 0.4)
@@ -617,11 +1040,16 @@ if pid_path:
 
 host = flag("--host") or "127.0.0.1"
 port = int(flag("--port"))
+models_path = os.environ.get("FAKE_LLAMA_MODELS", "")
 
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path.rstrip("/").endswith("/models"):
-            body = json.dumps({"data": [{"n_ctx": 2048}]}).encode()
+            if models_path and os.path.isfile(models_path):
+                with open(models_path, "rb") as handle:
+                    body = handle.read()
+            else:
+                body = json.dumps({"data": [{"n_ctx": 2048}]}).encode()
         else:
             body = b"{}"
         self.send_response(200)

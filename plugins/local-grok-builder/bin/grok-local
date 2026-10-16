@@ -28,6 +28,7 @@ if str(_BIN) not in sys.path:
 from contract import (  # noqa: E402
     CHAPTER_ANCHOR,
     apply_config,
+    drop_unbacked_loopback,
     endpoint_host,
     hosted_default,
     is_loopback,
@@ -111,9 +112,13 @@ def flag_value(argv, names):
     return None
 
 
+UNLOADED_CONTEXT = 32768
+
+
 def server_from_argv(argv, pid=None, defaults=None):
     model = flag_value(argv, ("-m", "--model"))
-    if not model:
+    models_dir = flag_value(argv, ("--models-dir",))
+    if not model and not models_dir:
         return None
     host = flag_value(argv, ("--host",))
     port = flag_value(argv, ("--port",))
@@ -126,7 +131,8 @@ def server_from_argv(argv, pid=None, defaults=None):
         port_number = int(port)
     except ValueError:
         return None
-    alias = flag_value(argv, ("--alias", "-a")) or Path(model).stem
+    router = bool(models_dir) and not model
+    alias = flag_value(argv, ("--alias", "-a")) or ("" if router else Path(model).stem)
     ctx_raw = flag_value(argv, ("-c", "--ctx-size"))
     try:
         context = int(ctx_raw) if ctx_raw is not None else None
@@ -138,7 +144,9 @@ def server_from_argv(argv, pid=None, defaults=None):
         "host": host,
         "port": port_number,
         "alias": alias,
-        "model_path": model,
+        "model_path": model or "",
+        "models_dir": models_dir or "",
+        "router": router,
         "context": context,
         "mmproj": flag_value(argv, ("--mmproj", "-mm")),
         "binary": argv[0],
@@ -217,13 +225,43 @@ def list_weights(directory):
     if not root.is_dir():
         return []
     files = []
-    for path in sorted(root.iterdir()):
+    for path in sorted(root.rglob("*.gguf")):
         if not path.is_file():
             continue
-        if path.name.startswith(".") or not path.name.endswith(".gguf"):
+        relative = path.relative_to(root)
+        if any(part.startswith(".") for part in relative.parts):
             continue
-        files.append({"name": path.name, "path": str(path), "bytes": path.stat().st_size})
+        if "mmproj" in path.name.lower():
+            continue
+        files.append(
+            {"name": relative.as_posix(), "path": str(path), "bytes": path.stat().st_size}
+        )
     return files
+
+
+def weight_ids(directory):
+    """File stems, plus a directory name when that directory holds a projector."""
+    root = Path(directory) if directory else None
+    found = {}
+    if root is None or not root.is_dir():
+        return found
+    grouped = {}
+    for path in sorted(root.rglob("*.gguf")):
+        if not path.is_file():
+            continue
+        relative = path.relative_to(root)
+        if any(part.startswith(".") for part in relative.parts):
+            continue
+        grouped.setdefault(path.parent, []).append(path)
+    for parent, paths in grouped.items():
+        projectors = [path for path in paths if "mmproj" in path.name.lower()]
+        weights = [path for path in paths if "mmproj" not in path.name.lower()]
+        for path in weights:
+            found[path.stem] = max(found.get(path.stem, 0), path.stat().st_size)
+        if parent != root and projectors and weights:
+            size = max(path.stat().st_size for path in weights)
+            found[parent.name] = max(found.get(parent.name, 0), size)
+    return found
 
 
 def default_weights(state, servers):
@@ -231,28 +269,18 @@ def default_weights(state, servers):
     if state.get("weights_dir"):
         return state["weights_dir"]
     for server in servers:
+        models_dir = server.get("models_dir") or ""
+        if models_dir and Path(models_dir).is_dir():
+            return models_dir
+    for server in servers:
         model = server.get("model_path")
         if model and Path(model).is_file():
             return str(Path(model).parent)
     return ""
 
 
-def discover(weights_dir, config_text, servers, wanted, context_key, prefix="model", id_key="model"):
+def discover(weights_dir, config_text, servers, context_key, prefix="model", id_key="model"):
     weights = list_weights(weights_dir) if weights_dir else []
-    by_name = {item["name"]: item for item in weights}
-    by_path = {item["path"]: item for item in weights}
-    missing_weights = []
-    for item in wanted:
-        name = item.get("name") or ""
-        path = str(Path(weights_dir) / name) if weights_dir and name else ""
-        if name and name not in by_name and path not in by_path:
-            missing_weights.append({"name": name, "url": item.get("url") or "", "path": path})
-    for server in servers:
-        model = server.get("model_path") or ""
-        if model and not Path(model).is_file():
-            missing_weights.append(
-                {"name": Path(model).name, "url": "", "path": model}
-            )
     present_servers = []
     for server in servers:
         host = server["host"]
@@ -281,24 +309,11 @@ def discover(weights_dir, config_text, servers, wanted, context_key, prefix="mod
     return {
         "weights_dir": weights_dir,
         "present_weights": weights,
-        "missing_weights": _unique_weights(missing_weights),
         "present_servers": present_servers,
         "missing_servers": missing_servers,
         "present_loopback": entries,
         "missing_loopback": missing_loopback,
     }
-
-
-def _unique_weights(items):
-    seen = set()
-    out = []
-    for item in items:
-        key = item.get("path") or item.get("name")
-        if key in seen:
-            continue
-        seen.add(key)
-        out.append(item)
-    return out
 
 
 def render_report(info, selected="", fetched=None, page=""):
@@ -399,16 +414,42 @@ def listen_host(default_host):
     return "127.0.0.1"
 
 
-def fetch_context(host, port, endpoint_path):
+def fetch_payload(host, port, endpoint_path):
     path = (endpoint_path or "").rstrip("/")
     url = "http://%s:%s%s/models" % (endpoint_host(host), port, path)
     try:
         request = urllib.request.Request(url, headers={"User-Agent": "local-grok-builder"})
         with urllib.request.urlopen(request, timeout=3) as response:
-            payload = json.loads(response.read().decode("utf-8", "replace"))
+            return json.loads(response.read().decode("utf-8", "replace"))
     except (OSError, ValueError, urllib.error.URLError):
         return None
+
+
+def fetch_context(host, port, endpoint_path):
+    payload = fetch_payload(host, port, endpoint_path)
+    if payload is None:
+        return None
     return _find_n_ctx(payload)
+
+
+def contexts_by_id(payload):
+    found = {}
+    data = payload.get("data") if isinstance(payload, dict) else None
+    if not isinstance(data, list):
+        return found
+    for item in data:
+        if not isinstance(item, dict):
+            continue
+        model_id = item.get("id")
+        if not isinstance(model_id, str) or not model_id:
+            continue
+        meta = item.get("meta") if isinstance(item.get("meta"), dict) else {}
+        ctx = meta.get("n_ctx")
+        if not isinstance(ctx, int) or ctx <= 0:
+            ctx = item.get("n_ctx")
+        if isinstance(ctx, int) and ctx > 0:
+            found[model_id] = ctx
+    return found
 
 
 def _find_n_ctx(value):
@@ -491,29 +532,40 @@ def free_port(host):
     return port
 
 
-def collect_servers(state, defaults, include_live=True):
+def assemble_servers(state, defaults, live):
     servers = []
     seen = set()
-    if include_live:
-        for item in live_servers(defaults):
-            key = (item["host"], int(item["port"]), item["model_path"])
-            seen.add((item["host"], int(item["port"])))
-            servers.append(item)
+    for item in live:
+        if not is_loopback(item["host"]):
+            continue
+        seen.add((item["host"], int(item["port"])))
+        servers.append(item)
     for raw in state.get("servers") or []:
         argv = raw.get("argv") or []
         item = server_from_argv(argv, defaults=defaults)
         if not item or not is_loopback(item["host"]):
+            continue
+        model = item.get("model_path") or ""
+        if model and not Path(model).is_file():
             continue
         bind = (item["host"], int(item["port"]))
         if bind in seen:
             continue
         seen.add(bind)
         servers.append(item)
+    if any(item.get("router") for item in servers):
+        servers = [item for item in servers if item.get("router") or item.get("pid")]
     return servers
+
+
+def collect_servers(state, defaults, include_live=True):
+    live = live_servers(defaults) if include_live else []
+    return assemble_servers(state, defaults, live)
 
 
 def choose(info):
     """Listening text server with the largest weight. Recorded-only is the fallback."""
+    ids = weight_ids(info.get("weights_dir") or "")
     candidates = []
     entries = info.get("present_loopback") or []
     for server in info.get("present_servers") or []:
@@ -523,13 +575,32 @@ def choose(info):
         model = server.get("model_path") or ""
         if model and Path(model).is_file():
             size = Path(model).stat().st_size
+        elif server.get("router") and ids:
+            size = max(ids.values())
+        matched = [
+            entry
+            for entry in entries
+            if same_bind(server["host"], server["port"], entry["host"], entry["port"])
+        ]
         bound = None
-        for entry in entries:
-            if same_bind(server["host"], server["port"], entry["host"], entry["port"]):
-                bound = entry
-                break
+        if server.get("router"):
+            backed = [
+                entry
+                for entry in matched
+                if entry["key"] in ids or (entry.get("model_id") or "") in ids
+            ]
+            if backed:
+                backed.sort(
+                    key=lambda entry: ids.get(entry["key"], ids.get(entry.get("model_id") or "", 0)),
+                    reverse=True,
+                )
+                bound = backed[0]
+        elif matched:
+            bound = matched[0]
         candidates.append((server, bound, size))
     if not candidates:
+        if ids:
+            return max(ids, key=ids.get)
         return ""
     listening = [item for item in candidates if item[0].get("listening")]
     pool = listening or candidates
@@ -537,6 +608,12 @@ def choose(info):
     pool = text or pool
     pool.sort(key=lambda item: item[2], reverse=True)
     server, entry, _size = pool[0]
+    if server.get("router"):
+        if entry and (entry["key"] in ids or (entry.get("model_id") or "") in ids):
+            return entry["key"] if entry["key"] in ids else entry["model_id"]
+        if ids:
+            return max(ids, key=ids.get)
+        return ""
     if entry:
         return entry["key"]
     return server.get("alias") or ""
@@ -559,9 +636,6 @@ def load_inputs(opts, defaults):
     state = read_state(state_path)
     servers = collect_servers(state, defaults, include_live=opts.get("live", True))
     weights = opts.get("weights") or default_weights(state, servers)
-    wanted = list(state.get("wanted") or [])
-    if opts.get("fetch") and opts.get("name"):
-        wanted.append({"name": opts["name"], "url": opts["fetch"]})
     config_file = Path(config_path)
     config_text = config_file.read_text() if config_file.is_file() else ""
     return {
@@ -570,7 +644,6 @@ def load_inputs(opts, defaults):
         "state": state,
         "servers": servers,
         "weights": weights,
-        "wanted": wanted,
         "config_text": config_text,
     }
 
@@ -582,25 +655,17 @@ def setup(opts, contract, defaults):
         raise SystemExit("weights directory is unknown")
     Path(weights).mkdir(parents=True, exist_ok=True)
     fetched = []
-    wanted = inputs["wanted"]
-    for item in wanted:
-        name = item.get("name")
-        url = item.get("url")
-        if not name or not url:
-            continue
-        dest = Path(weights) / name
-        if dest.is_file() and dest.stat().st_size > 0:
-            continue
-        written, source_bytes = download(url, dest)
-        fetched.append({"path": str(dest), "bytes": written, "source_bytes": source_bytes})
-    # A server whose model path was missing can now see the file.
-    servers = inputs["servers"]
+    if opts.get("fetch") and opts.get("name"):
+        dest = Path(weights) / opts["name"]
+        if not (dest.is_file() and dest.stat().st_size > 0):
+            written, source_bytes = download(opts["fetch"], dest)
+            fetched.append({"path": str(dest), "bytes": written, "source_bytes": source_bytes})
+    # assemble drops a -m whose file is still absent, so this follows --fetch.
+    servers = collect_servers(
+        inputs["state"], defaults, include_live=opts.get("live", True)
+    )
     if not servers:
-        ggufs = [
-            item
-            for item in list_weights(weights)
-            if item["name"].endswith(".gguf") and "mmproj" not in item["name"]
-        ]
+        ggufs = list_weights(weights)
         if ggufs:
             chosen = max(ggufs, key=lambda item: item["bytes"])
             binary = llama_binary(servers)
@@ -612,17 +677,48 @@ def setup(opts, contract, defaults):
     log_path = opts.get("log") or str(Path.home() / ".grok" / "local-server.log")
     started = []
     for server in servers:
-        model = server.get("model_path") or ""
-        if model and not Path(model).is_file():
-            continue
         if not port_open(server["host"], server["port"]):
             server = ensure_listening(server, log_path, contract["endpoint_path"])
-        server["context"] = resolve_context(server, contract["endpoint_path"])
+        else:
+            server["listening"] = True
+        if not server.get("router"):
+            server["context"] = resolve_context(server, contract["endpoint_path"])
         started.append(server)
     text = inputs["config_text"]
     before_default = hosted_default(text)
-    for server in started:
-        text = apply_config(text, contract, server, server["context"])
+    ids = weight_ids(weights)
+    id_set = set(ids)
+    routers = [server for server in started if server.get("router")]
+    if routers:
+        reported = {}
+        payload = fetch_payload(routers[0]["host"], routers[0]["port"], contract["endpoint_path"])
+        if payload is not None:
+            reported = contexts_by_id(payload)
+        previous = {}
+        for entry in loopback_from_config(
+            text, contract["context_key"], contract["prefix"], contract["id_key"]
+        ):
+            kept = entry.get("context")
+            if not isinstance(kept, int) or kept <= 0:
+                continue
+            previous[entry["key"]] = kept
+            if entry.get("model_id"):
+                previous[entry["model_id"]] = kept
+        if ids:
+            for model_id in ids:
+                ctx = reported.get(model_id)
+                if not isinstance(ctx, int) or ctx <= 0:
+                    ctx = previous.get(model_id, UNLOADED_CONTEXT)
+                text = apply_config(
+                    text, contract, dict(routers[0], alias=model_id), ctx, id_set
+                )
+        else:
+            text = drop_unbacked_loopback(text, contract, id_set)
+    elif started:
+        for server in started:
+            text = apply_config(text, contract, server, server.get("context"), id_set)
+    else:
+        text = drop_unbacked_loopback(text, contract, id_set)
     after_default = hosted_default(text)
     if before_default != after_default:
         raise SystemExit("hosted default changed")
@@ -630,11 +726,7 @@ def setup(opts, contract, defaults):
         write_text_atomic(inputs["config_path"], text)
     state = {
         "weights_dir": weights,
-        "wanted": [
-            {"name": item["name"], "url": item["url"]}
-            for item in wanted
-            if item.get("name") and item.get("url")
-        ],
+        "wanted": [],
         "servers": [{"argv": server["argv"]} for server in started if server.get("argv")],
     }
     write_state(inputs["state_path"], state)
@@ -642,12 +734,10 @@ def setup(opts, contract, defaults):
         weights,
         text,
         started,
-        [],
         contract["context_key"],
         contract["prefix"],
         contract["id_key"],
     )
-    # Wanted files that are now on disk must not be missing.
     selected = choose(info)
     info["hosted_default"] = after_default
     return info, selected, fetched
@@ -660,7 +750,6 @@ def discover_only(opts, contract, defaults):
         inputs["weights"],
         inputs["config_text"],
         inputs["servers"],
-        inputs["wanted"],
         roles.get("context_key"),
         roles.get("prefix", "model"),
         roles.get("id_key", "model"),

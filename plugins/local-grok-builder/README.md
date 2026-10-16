@@ -6,7 +6,7 @@ Fits a local GGUF chat suite to the machine in front of you and points Grok at i
 grok plugin install local-grok-builder --trust
 ```
 
-`/fit` measures the machine, discovers weights, a running server, and loopback model entries that are already there, and reads today's docs. When you ask for local models, it downloads a missing weight, writes the loopback entry, and starts the server. `grok-local`, from any directory, execs the `grok` CLI on that local model. `/doctor` only reports. License is MIT, the same terms as the repository `LICENSE`.
+`/fit` measures the machine, discovers weights, a running server, and loopback model entries that are already there, and reads today's docs. The weights directory is the catalog, including a `.gguf` in a subdirectory. A filename containing `mmproj` is a projector, not a model. When you ask for local models, it can download a new file you name, writes the loopback entry, and drops a loopback entry whose file is gone. It does not download a saved name that is not a file, and it does not relaunch a saved `-m` whose file is gone. A `--models-dir` router with no `-m` is the server. `grok-local`, from any directory, execs the `grok` CLI on that local model. `/doctor` only reports. License is MIT, the same terms as the repository `LICENSE`.
 
 Network endpoints this plugin tells the agent to open:
 

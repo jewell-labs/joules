@@ -299,40 +299,64 @@ def hosted_default(text):
     return ""
 
 
-def apply_config(text, contract, server, context):
+def drop_unbacked_loopback(text, contract, keep_ids):
+    """Remove a loopback model whose id is not a file still in the weights directory."""
+    entries = loopback_from_config(
+        text, contract["context_key"], contract["prefix"], contract["id_key"]
+    )
+    for entry in entries:
+        ident = entry.get("model_id") or entry["key"]
+        if ident in keep_ids or entry["key"] in keep_ids:
+            continue
+        existing = split_section(text, entry["section"])
+        if existing is None:
+            continue
+        before, _body, after = existing
+        text = "".join(before) + "".join(after)
+    return text
+
+
+def apply_config(text, contract, server, context, present_ids=None):
     for forbidden in contract["forbidden"]:
         if forbidden in (contract["id_key"], contract["endpoint_key"], contract["context_key"]):
             raise SystemExit("chapter field collides with the catalog endpoint")
     if not is_loopback(server.get("host")):
         raise SystemExit("refusing a server that is not on loopback")
-    alias = server["alias"]
-    header = section_header(contract["prefix"], alias)
-    path = contract["endpoint_path"]
-    endpoint = "http://%s:%s%s" % (endpoint_host(server["host"]), server["port"], path)
-    fields = [
-        (contract["id_key"], alias),
-        (contract["endpoint_key"], endpoint),
-        (contract["name_key"], alias),
-        (contract["context_key"], int(context)),
-        (contract["credential_key"], ""),
-    ]
-    for key, _value in fields:
-        if key in contract["forbidden"]:
-            raise SystemExit("refusing to write catalog endpoint field")
-    updated = upsert_model(text, header, fields)
+    updated = text
+    alias = server.get("alias") or ""
+    if alias and context is not None:
+        header = section_header(contract["prefix"], alias)
+        path = contract["endpoint_path"]
+        endpoint = "http://%s:%s%s" % (endpoint_host(server["host"]), server["port"], path)
+        fields = [
+            (contract["id_key"], alias),
+            (contract["endpoint_key"], endpoint),
+            (contract["name_key"], alias),
+            (contract["context_key"], int(context)),
+            (contract["credential_key"], ""),
+        ]
+        for key, _value in fields:
+            if key in contract["forbidden"]:
+                raise SystemExit("refusing to write catalog endpoint field")
+        updated = upsert_model(text, header, fields)
 
-    def tables(blob):
-        return {
-            name
-            for name, _fields in parse_sections(blob)
-            if contract["catalog_table"] and name == contract["catalog_table"]
-        }
+        def tables(blob):
+            return {
+                name
+                for name, _fields in parse_sections(blob)
+                if contract["catalog_table"] and name == contract["catalog_table"]
+            }
 
-    if tables(updated) - tables(text):
-        raise SystemExit("refusing to add a catalog-wide endpoint table")
-    for forbidden in contract["forbidden"]:
-        old_count = text.count("\n" + forbidden + " ") + text.count("\n" + forbidden + "=")
-        new_count = updated.count("\n" + forbidden + " ") + updated.count("\n" + forbidden + "=")
-        if new_count > old_count:
-            raise SystemExit("refusing to write %s" % forbidden)
+        if tables(updated) - tables(text):
+            raise SystemExit("refusing to add a catalog-wide endpoint table")
+        for forbidden in contract["forbidden"]:
+            old_count = text.count("\n" + forbidden + " ") + text.count("\n" + forbidden + "=")
+            new_count = updated.count("\n" + forbidden + " ") + updated.count("\n" + forbidden + "=")
+            if new_count > old_count:
+                raise SystemExit("refusing to write %s" % forbidden)
+    if present_ids is not None:
+        keep = set(present_ids)
+        if alias:
+            keep.add(alias)
+        updated = drop_unbacked_loopback(updated, contract, keep)
     return updated
