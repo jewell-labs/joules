@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { mkdtemp, writeFile } from "node:fs/promises"
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises"
 import http from "node:http"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -78,6 +78,63 @@ test("the served page is a prompt form and a decision graph", async () => {
   }
 })
 
+test("a weights file inside a subdirectory is a model", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "jev-classify-"))
+  await mkdir(join(dir, "nested"))
+  await writeFile(join(dir, "nested", "Qwen3.8-27B-UD-Q4_K_M.gguf"), "")
+  await writeFile(join(dir, "nested", "mmproj-Q8_0.gguf"), "")
+  const app = await start(0, {
+    ...process.env,
+    WEIGHTS_DIR: dir,
+    GROK_CONFIG: join(dir, "missing.toml"),
+    SUITE_STATE: join(dir, "missing.json"),
+  })
+  try {
+    const response = await fetch(`http://127.0.0.1:${app.address().port}/api/models`)
+    const body = await response.json()
+    assert.equal(response.status, 200)
+    assert.deepEqual(
+      body.models.map((model) => model.file),
+      ["nested/Qwen3.8-27B-UD-Q4_K_M.gguf"],
+    )
+    assert.equal(body.models[0].id, "Qwen3.8-27B-UD-Q4_K_M")
+  } finally {
+    await new Promise((resolve) => app.close(resolve))
+  }
+})
+
+test("a loopback config entry does not invent a model that is not on disk", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "jev-classify-"))
+  await writeFile(join(dir, "Qwen3.8-27B-UD-Q4_K_M.gguf"), "")
+  await writeFile(
+    join(dir, "config.toml"),
+    `[model."Holo-3.1-4B"]
+base_url = "http://127.0.0.1:9/v1"
+
+[model."Qwen3.8-27B-UD-Q4_K_M"]
+base_url = "http://127.0.0.1:9/v1"
+`,
+  )
+  const app = await start(0, {
+    ...process.env,
+    WEIGHTS_DIR: dir,
+    GROK_CONFIG: join(dir, "config.toml"),
+    SUITE_STATE: join(dir, "missing.json"),
+  })
+  try {
+    const response = await fetch(`http://127.0.0.1:${app.address().port}/api/models`)
+    const body = await response.json()
+    assert.deepEqual(
+      body.models.map((model) => model.id),
+      ["Qwen3.8-27B-UD-Q4_K_M"],
+    )
+    assert.equal(body.models[0].listening, false)
+    assert.equal(body.models[0].where, "127.0.0.1:9")
+  } finally {
+    await new Promise((resolve) => app.close(resolve))
+  }
+})
+
 test("a result page names the picked model in the graph and the table", () => {
   const models = catalogFromNames(NAMES).map((model) =>
     model.id.startsWith("Devstral") ? { ...model, listening: true, where: "127.0.0.1:9" } : model,
@@ -94,7 +151,7 @@ test("a result page names the picked model in the graph and the table", () => {
     }),
   })
   assert.match(html, /Picked/)
-  assert.match(html, /Devstral Small 2 24B/)
+  assert.match(html, /Devstral Small 2 24B Instruct 2512 Q4 K M/)
   assert.match(html, /Fix the failing test/)
   assert.match(html, /<th scope="row">Job<\/th><td>code<\/td>/)
 })
@@ -122,7 +179,7 @@ test("one classifier failure is retried", async () => {
     json(res, 200, { answers: { job: { choice: "writing" }, care: { score: 1 }, model: { choice: "stories260K" } } })
   }, async (response, body) => {
     assert.equal(response.status, 200)
-    assert.equal(body.graph.chosen.title, "Tiny story model")
+    assert.equal(body.graph.chosen.title, "stories260K")
     assert.equal(calls, 2)
   })
 })
@@ -190,7 +247,7 @@ test("steps stream before the route is finished", { timeout: 3000 }, async () =>
           releaseCare()
         }
         if (event.type === "done") {
-          assert.equal(event.graph.chosen.title, "Tiny story model")
+          assert.equal(event.graph.chosen.title, "stories260K")
           assert.equal(typeof event.latency_ms, "number")
         }
       }

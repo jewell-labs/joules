@@ -6,6 +6,7 @@ import {
   catalogFromNames,
   cleanRequest,
   decisionGraph,
+  fileCoversId,
   formatLatency,
   graphMarkup,
   loopbackModelsFromConfig,
@@ -28,9 +29,19 @@ test("the catalog is every local model file, and a projector is not a model", ()
   const models = catalogFromNames(NAMES)
   assert.deepEqual(
     models.map((model) => model.title),
-    ["Devstral Small 2 24B", "Holo 3.1 4B", "Holo 3.1 9B", "Qwen3 14B", "Qwen3 14B Q5", "Tiny story model"],
+    [
+      "Devstral Small 2 24B Instruct 2512 Q4 K M",
+      "Holo 3.1 4B.Q4 K M",
+      "Holo 3.1 9B.Q4 K M",
+      "Qwen3 14B Q5 K M",
+      "Qwen3 14B UD Q4 K XL",
+      "stories260K",
+    ],
   )
   assert.equal(models.some((model) => model.file.includes("mmproj")), false)
+  assert.equal(fileCoversId("Qwen3-14B-Q5_K_M.gguf", "Qwen3-14B"), false)
+  assert.equal(fileCoversId("nested/Qwen3.8-27B-UD-Q4_K_M.gguf", "Qwen3.8-27B-UD-Q4_K_M"), true)
+  assert.equal(catalogFromNames(["nested/Qwen3.8-27B-UD-Q4_K_M.gguf"])[0].id, "Qwen3.8-27B-UD-Q4_K_M")
 })
 
 test("config entries stay on loopback and drop the key", () => {

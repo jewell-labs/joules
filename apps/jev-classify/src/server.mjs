@@ -52,6 +52,26 @@ async function readText(path) {
   }
 }
 
+async function weightNames(dir) {
+  const names = []
+  async function walk(current, prefix) {
+    let entries
+    try {
+      entries = await readdir(current, { withFileTypes: true })
+    } catch {
+      return
+    }
+    for (const entry of entries) {
+      if (entry.name.startsWith(".")) continue
+      const relative = prefix ? `${prefix}/${entry.name}` : entry.name
+      if (entry.isDirectory()) await walk(join(current, entry.name), relative)
+      else if (entry.isFile() && entry.name.endsWith(".gguf")) names.push(relative)
+    }
+  }
+  if (dir) await walk(dir, "")
+  return names
+}
+
 function portOpen(host, port) {
   return new Promise((resolve) => {
     const socket = createConnection({ host, port: Number(port), timeout: 400 })
@@ -76,24 +96,11 @@ export async function discoverModels(env = process.env) {
       weightsDir = ""
     }
   }
-  let names = []
-  if (weightsDir) {
-    try {
-      names = await readdir(weightsDir)
-    } catch {
-      names = []
-    }
-  }
+  const names = await weightNames(weightsDir)
   const configured = loopbackModelsFromConfig(await readText(configPath(env)))
-  for (const item of configured) {
-    if (!names.some((name) => name.startsWith(item.id) && name.endsWith(".gguf"))) {
-      names.push(item.id + ".gguf")
-    }
-  }
-  const listeners = []
-  for (const item of configured) {
-    listeners.push({ ...item, open: await portOpen(item.host, item.port) })
-  }
+  const listeners = await Promise.all(
+    configured.map(async (item) => ({ ...item, open: await portOpen(item.host, item.port) })),
+  )
   return assignListening(catalogFromNames(names), listeners)
 }
 

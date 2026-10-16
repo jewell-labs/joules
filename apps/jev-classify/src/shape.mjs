@@ -2,43 +2,6 @@
 
 const MAX_STATE = 8000
 
-const KNOWN = [
-  {
-    match: "Devstral",
-    title: "Devstral Small 2 24B",
-    criterion: "The prompt asks to write, read, or fix code.",
-  },
-  {
-    match: "Holo-3.1-9B",
-    title: "Holo 3.1 9B",
-    criterion:
-      "The prompt is about a screen, a browser, or using a computer, and it needs the larger Holo model.",
-  },
-  {
-    match: "Holo-3.1-4B",
-    title: "Holo 3.1 4B",
-    criterion:
-      "The prompt is about a screen, a browser, or using a computer, and the smaller Holo model is enough.",
-  },
-  {
-    match: "Qwen3-14B-Q5",
-    title: "Qwen3 14B Q5",
-    criterion:
-      "The prompt is a general question or a piece of writing, and it needs the higher-quality Qwen file.",
-  },
-  {
-    match: "Qwen3-14B-UD",
-    title: "Qwen3 14B",
-    criterion:
-      "The prompt is a general question or a piece of writing, and the lighter Qwen server is enough.",
-  },
-  {
-    match: "stories",
-    title: "Tiny story model",
-    criterion: "The prompt asks only for a tiny story-completion demo, not a real assistant.",
-  },
-]
-
 const CARE = [
   "A quick short answer is enough.",
   "A normal answer is enough.",
@@ -47,10 +10,11 @@ const CARE = [
 ]
 
 const JOBS = {
-  code: "The prompt asks to write or fix code.",
+  code: "The prompt asks to write or fix code, including SQL.",
   computer: "The prompt asks to use a screen, a browser, or a computer interface.",
   writing: "The prompt asks for an explanation, a draft, or a general answer.",
-  story: "The prompt asks only for a tiny story demo.",
+  math: "The prompt asks for multi-step reasoning or a hard quantitative answer.",
+  long: "The prompt asks to read or answer over a long document.",
 }
 
 export const ANIMALS = {
@@ -141,16 +105,36 @@ export function modelsForRequest(models, image, clef) {
   return [...rest, choice].sort((a, b) => a.title.localeCompare(b.title) || a.id.localeCompare(b.id))
 }
 
+function fileStem(name) {
+  const base = String(name).split("/").pop()
+  if (!base.endsWith(".gguf")) return ""
+  return base.slice(0, -".gguf".length)
+}
+
+export function fileCoversId(fileName, id) {
+  const stem = fileStem(fileName)
+  return Boolean(stem) && (stem === id || stem.startsWith(`${id}.`))
+}
+
+function titleFromId(id) {
+  return id.replaceAll("_", " ").replaceAll("-", " ")
+}
+
 export function catalogFromNames(names) {
   const models = []
+  const seen = new Set()
   for (const name of names) {
-    if (!name.endsWith(".gguf") || name.includes("mmproj")) continue
-    const id = name.slice(0, -".gguf".length)
-    const known = KNOWN.find((item) => id.includes(item.match))
+    if (String(name).includes("mmproj")) continue
+    const stem = fileStem(name)
+    if (!stem) continue
+    let id = stem
+    if (seen.has(id)) id = String(name).slice(0, -".gguf".length)
+    seen.add(id)
+    const title = titleFromId(id)
     models.push({
       id,
-      title: known?.title || id,
-      criterion: known?.criterion || "The prompt fits this model better than the others.",
+      title,
+      criterion: `Pick this file when the prompt fits ${title} better than the other files.`,
       file: name,
       listening: false,
       where: "",
