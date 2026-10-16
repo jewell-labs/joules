@@ -17,8 +17,15 @@ grok plugin install joules-plugins --trust
 | --- | --- |
 | [joules-plugins](plugins/joules-plugins) | Creates, evaluates, updates, and scores one plugin. The rubric covers a single skill through a plugin with several components. |
 | [web-app](plugins/web-app) | Creates or extends a Void pages app. The app is Solid on Cloudflare Workers, adds a page, a table, or a stream as one change, persists each deploy so another computer can clone that version, deploys with Void, and serves one public HTTP healthcheck. |
+| [local-grok-builder](plugins/local-grok-builder) | Fits a local GGUF suite to this machine and wires the chat Grok can run locally. `/doctor` only reports. |
 
 `hello-note` and `sample-note` are fixtures named by the joules-plugins run record. The hello-note skill path repeats the plugin name because that prompt requires `skills/hello-note/SKILL.md`.
+
+## Apps
+
+| App | What it shows |
+| --- | --- |
+| [jev-classify](apps/jev-classify) | A lay page that asks Clef which local model should take a prompt, and draws that decision as nodes. It is not a plugin. |
 
 ## Add a plugin
 
@@ -37,6 +44,7 @@ AGENTS.md                            rules for agents in this repo
 .grok-plugin/marketplace.json        catalog Grok reads
 .grok-plugin/plugin-index.json       component list shown before install
 plugins/<name>/                      one plugin, the public parent
+apps/<name>/                         one app, not a plugin
 ```
 
 A plugin name is the parent a person installs. A skill or command inside it is named for its job, not for the plugin. The rule is in [AGENTS.md](AGENTS.md).
