@@ -24,7 +24,7 @@
       "name": "web-app",
       "description": "Create or extend a Void pages app on Cloudflare Workers. A page, a table, or a stream is one addition. The app deploys with Void and serves one public HTTP healthcheck.",
       "category": "development",
-      "version": "0.12.0",
+      "version": "0.13.0",
       "author": "Joules",
       "homepage": "https://github.com/jewell-labs/joules/tree/main/plugins/web-app",
       "keywords": ["web-app", "void", "cloudflare", "solid", "mcp", "webmcp"],

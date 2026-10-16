@@ -1,5 +1,5 @@
 ---
-description: Deploy the app with Void and persist that version.
+description: Deploy the app with Void after Prepare.
 argument-hint: "[app directory]"
 ---
 

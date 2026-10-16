@@ -27,7 +27,7 @@ Every host that can read this repository follows this file. Do not fork the proc
 
 This procedure is on top of the official `cloudflare` plugin for Workers. Page tools follow WebMCP. Screenshots, console, network, and clicks follow the browser path in the repository Hosts section. The procedure still finishes from the Void docs and from HTTP checks when that browser is not installed. The official catalog has no plugin that writes a Void pages app.
 
-Open the current docs before you write, extend, clone, deploy, rewind, or score an app. Use https://void.cloud and the docs in the installed `void` package, including deployment and the project commands. When the app depends on `void`, the package is `node_modules/void`. Otherwise the package is the global install in the Commands section of the joules-plugins skill `author`. Open the file `skills/void/SKILL.md` names for this step. Do not search the package. Start at https://void.cloud/reference/structure and the pages and database guides that page links. Read https://void.cloud/reference/api for streams. When the public docs and the package disagree, the package wins for files that must load. Use https://developers.cloudflare.com/workers/versions-and-deployments/ and https://developers.cloudflare.com/workers/versions-and-deployments/rollbacks/ for versions and rewind. When the `cloudflare`, `cloudflare-web-apps`, or `workers-best-practices` skills are installed, follow them for the Cloudflare part. Do not copy those skills into this plugin.
+Open the current docs before you write, extend, clone, deploy, rewind, or score an app. When this part tells you to stop before that work, stop. Do not open a page and do not run a command. Use https://void.cloud and the docs in the installed `void` package, including deployment and the project commands. When the app depends on `void`, the package is `node_modules/void`. Otherwise the package is the global install in the Commands section of the joules-plugins skill `author`. Open the file `skills/void/SKILL.md` names for this step. Do not search the package. Start at https://void.cloud/reference/structure and the pages and database guides that page links. Read https://void.cloud/reference/api for streams. When the public docs and the package disagree, the package wins for files that must load. Use https://developers.cloudflare.com/workers/versions-and-deployments/ and https://developers.cloudflare.com/workers/versions-and-deployments/rollbacks/ for versions and rewind. When the `cloudflare`, `cloudflare-web-apps`, or `workers-best-practices` skills are installed, follow them for the Cloudflare part. Do not copy those skills into this plugin.
 
 Node package commands follow the Commands section of the joules-plugins skill `author`. Run the global `void`. Inside the app, `pnpm exec void`. A repeated app command is `pnpm run <name>`.
 
@@ -78,7 +78,9 @@ Return present, missing, or unavailable for the Cloudflare session, the Void pla
 
 ## Plan
 
-1. Run `--help` on the Void commands the docs you opened tell you to use. Do not invent a flag.
+When the prompt names the package, the title, and the interface, and it does not leave a choice empty, those are the decisions. Do not open a web page. Do not run a command. Return the decisions and stop.
+
+1. Run `--help` on the Void commands this prompt still needs. Do not invent a flag. Skip this step when the paragraph above already returned.
 2. Map the user prompt onto those commands. Use a default the help text prints when the user did not override it.
 3. An unknown is a required choice that is still empty, a companion the docs require for a value already chosen, a phrase that fits two documented values, a new state that fits two existing destinations, or a product Prepare returned as unavailable. One companion set is one question. The unavailable-product question is: still use it? Keeping it requires the link Prepare returned, then Prepare again. Dropping it removes that product from the decisions. A printed default is not a question. A prompt that says those states share one route is not a question. A bare "create a web app" asks only required choices that have no default, one per turn.
 4. When one unknown remains, ask it and stop.
@@ -88,7 +90,17 @@ Do not write a file. Do not create the app.
 
 ## Create
 
-Write the app from the plan reply and the docs you opened. This plugin has no template. A file a Void command writes is produced by that command. Read its `--help`, then pass the arguments that help prints. Leave the file as the command wrote it. A piece no command writes stops this step as the one question. A TypeScript symbol is the Language server section. When a page is part of the app, its loader returns a concrete object for the props that page renders. Loaders follow https://void.cloud/guide/pages-routing/loaders.
+When the prompt forbids a wizard, do not run `void init`. Its `--help` has no flag for the toolchain, the interface, or the starter. Return that as the one question, write nothing, and stop.
+
+When the prompt allows the wizard, run `void init --no-git` unless it asked for a git repository. That help has no flag for the toolchain, the interface, or the starter, so answer those prompts. Vite+ unless the prompt names Vite. Solid unless it names another interface. Static Pages unless it names D1, PostgreSQL, or MySQL. Skip deployment setup when the prompt says not to deploy. Leave the files that command writes.
+
+Three edits have no Void command. Make only these. Do not rewrite the rest of a generated file.
+
+1. Set `name` in `package.json` to the package name in the plan reply. Set `head.title` in `void.config.ts` to the title in that reply. The field is the `head` section of https://void.cloud/reference/config . When the prompt asks for a Cloudflare project, set `cloudflare.name` to that package name in the same file.
+2. Write `routes/mcp.ts`. Export `GET` from `defineHandler` in `void`, as https://void.cloud/reference/api/handlers documents. With no page read, the only tool is `healthcheck`, marked read-only, and the handler returns that tool. No OAuth.
+3. The `deploy` script in the next paragraph.
+
+A file a Void command writes is produced by that command. Read its `--help`, then pass the arguments that help prints. Leave the file as the command wrote it. Any other piece no command writes stops this step as the one question. A TypeScript symbol is the Language server section. When a page is part of the app, its loader returns a concrete object for the props that page renders. Loaders follow https://void.cloud/guide/pages-routing/loaders.
 
 When the decisions include a new Cloudflare project, run Prepare first. When a grant is missing, write nothing remotely. Return the missing grant and its link. Do not create a Worker.
 
@@ -110,22 +122,24 @@ When the user wants to open the app in a browser, follow Preview. Do not deploy 
 
 ## Clone
 
-Use this to put one worker version on this computer. The inputs are the worker name, a version id, and a destination. `live` means the version receiving traffic. When no copy of the app is on this computer, stop at step 2. The next step is the git checkout the user names. When the app is already here, `pnpm exec void project status` marks it `live`.
+Use this to put one worker version on this computer. The inputs are the worker name, a version id, and a destination. `live` means the version receiving traffic. When no copy of the app is on this computer, stop at step 1. The next step is the git checkout the user names. When the app is already here, `pnpm exec void project status` marks it `live`.
 
-1. Run Prepare. When a grant is missing, write nothing. Return the missing grant and its link.
-2. This procedure does not keep a source archive. When no copy of the app is on this computer, stop. The next step is the git checkout the user names. The destination must not already contain an app.
-3. Do not hand-write `.void/project.json`. Persistence says `void connect` or `void deploy` writes it. Install dependencies with `pnpm install` and run `pnpm exec void prepare`. When `pnpm exec void project status` needs that file and it is missing, stop. The next command is `void connect` with the host the user named. Do not deploy to create the file.
-4. Return the destination path and the version id. Do not deploy.
+1. When the prompt says not to deploy or spend, and no copy of the app is on this computer, stop. Do not run Prepare. The next step is the git checkout the user names.
+2. Run Prepare. When a grant is missing, write nothing. Return the missing grant and its link.
+3. This procedure does not keep a source archive. When no copy of the app is on this computer, stop. The next step is the git checkout the user names. The destination must not already contain an app.
+4. Do not hand-write `.void/project.json`. Persistence says `void connect` or `void deploy` writes it. Install dependencies with `pnpm install` and run `pnpm exec void prepare`. When `pnpm exec void project status` needs that file and it is missing, stop. The next command is `void connect` with the host the user named. Do not deploy to create the file.
+5. Return the destination path and the version id. Do not deploy.
 
 ## Deploy
 
 Use this when the prompt asks to deploy. Create does not enter this section. Continue here after Validate, when the prompt or the user says to deploy.
 
-1. Run Prepare. When a grant is missing, or a named product is unavailable and Plan has no answer for it, do not deploy. Return that grant or product and its link.
-2. Run the check in Validate. Do not deploy when it fails.
-3. Deploy by running `pnpm exec void deploy --platform cloudflare` in the app. Do not combine `--project`. Do not deploy by running the deploy script.
-4. Follow Persistence for the lockfile that command writes.
-5. Read the worker URL the command prints, and read `/mcp`. `pnpm exec void project status` is the version id. Return the URL and that id. The return names no secrets.
+1. When the prompt does not name the platform URL, stop. Ask for that URL. Do not run `void deploy`. The next commands are `void connect <url>` and `void account login`.
+2. Run Prepare. When a grant is missing, or a named product is unavailable and Plan has no answer for it, do not deploy. Return that grant or product and its link.
+3. Run the check in Validate. Do not deploy when it fails.
+4. Deploy by running `pnpm exec void deploy --platform cloudflare` in the app. Do not combine `--project`. Do not deploy by running the deploy script.
+5. Follow Persistence for the lockfile that command writes.
+6. Read the worker URL the command prints, and read `/mcp`. `pnpm exec void project status` is the version id. Return the URL and that id. The return names no secrets.
 
 ## Rewind
 
@@ -149,7 +163,7 @@ Use this when someone needs to open the app in a browser. Do not deploy.
 
 ## Extend
 
-Use this when the app already exists, and when Create's prompt names a destination, a table, or a stream.
+Use this when the app already exists, and when Create's prompt names a destination, a table, or a stream. When the directory is not an app yet, stop. Do not run Create. The next part is Create.
 
 The inputs are the plan reply, or the user prompt when it names an existing directory, plus the docs you opened. Run the Void command that writes each file, as Create describes. The generator page in the installed package is `docs/reference/cli/generate.md`.
 
@@ -180,7 +194,7 @@ Return the tool names and the `/mcp` path.
 
 ## Validate
 
-The directory is the path Create, Extend, or Clone returned, or the directory the user named.
+The directory is the path Create, Extend, or Clone returned, or the directory the user named. An app has a `package.json`. When that file is absent, return fail and that path. Do not run a command. Do not create the directory. Do not deploy.
 
 1. Run the build Create names, `pnpm run build`, in that directory. Do not deploy.
 2. When the prompt asked for tests and `package.json` has a `test` script, run `pnpm run test`.
@@ -194,7 +208,7 @@ The table shape and the publish loop are the Records section of the joules-plugi
 
 Read the Prompt cells in this plugin's `README.md`, between `<!-- eval-status:start -->` and `<!-- eval-status:end -->`.
 
-Score the row the user named. When they did not name one, score the first row whose Result cell is empty. One prompt per run. Do not reuse a directory from another row.
+Score the row the user named. When they did not name one, score the first row whose Result cell is empty. One prompt per run. Do not reuse a directory from another row. When the prompt says not to write the row and not to follow it, name the run record and stop. Do not open a page and do not run a command.
 
 1. Keep `{{dest}}` in the file. When the user did not name a directory, substitute a temporary directory for `{{dest}}` in the prompt you follow.
 2. Follow Plan, then Create. Create follows Extend for every destination, table, and stream that prompt names. Create follows Prepare and Deploy when that prompt asks for a Worker. When the prompt says to clone that version, follow Clone into a second temporary directory and do not deploy the clone.
