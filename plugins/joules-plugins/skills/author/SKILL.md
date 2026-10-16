@@ -29,6 +29,14 @@ The Rubric section is the only matrix. Do not invent a second rubric, and do not
 
 A child session returns a summary. The parent uses that summary. It does not look for a results file.
 
+## Commands
+
+A command in a skill is the leaf that returns that step's fact. Run that leaf's `--help` before you add a flag. A group command with no leaf prints the wrong help.
+
+A machine-wide tool is a global package. Install it with `pnpm add -g <name>@<version>`. The pages are https://pnpm.io/cli/add and https://pnpm.io/global-packages . Run the bin. Inside a project that depends on the package, `pnpm exec <bin>` runs that copy: https://pnpm.io/cli/exec . A command the agent repeats is one `scripts` entry, and the agent runs `pnpm run <name>`: https://pnpm.io/cli/run . The script body is the program pnpm puts on `PATH`. It does not call `npm`, `npx`, or `pnpm`. When install ignores a build script that command needs, approve the names it printed with `pnpm approve-builds`: https://pnpm.io/cli/approve-builds .
+
+Open a file by the relative path that package's own skill or docs index names. In a project, the package is `node_modules/<name>` when that directory's `package.json` name matches. For the global package, `pnpm list -g <name> --parseable` prints the directory, and the line that ends in `node_modules/<name>` is the package. Do not search the tree, do not list it and truncate the list, and do not hardcode a path. Procedure scores 0 when a step does otherwise, or when it runs `npm` or `npx`, or when a repeated project command is not `pnpm run <name>`.
+
 ## Records
 
 Every plugin README has two tables. Create writes both, with no scores. The roadmap ids are the capabilities this plugin owns. A prohibition is not an id. `out of scope` means another plugin owns that row.
@@ -75,7 +83,7 @@ Volatile contracts stay on the pages you opened this session. A row scores 0 whe
 | --- | --- | --- | --- |
 | Load (15) | `grok plugin validate` exits 0. A skipped run when `grok` is installed scores 0. | When the plugin is installed, `grok inspect` lists the extra component. | `grok inspect` lists every component the index names. |
 | Job (15) | One job. The relationship is exclusive, on top of a named official plugin, or still useful without that plugin. A repeat of an official entry scores 0. | The extra component serves that same job. | Every component serves that one job. |
-| Procedure (15) | The description says what it does, when it runs, and the slash name. The body states when, inputs, steps, how to check, what to return, and what a person must approve. | The added command, agent, or hook has the when, steps, and check the page you opened requires. | Every skill and command is one workflow. |
+| Procedure (15) | The description says what it does, when it runs, and the slash name. The body states when, inputs, steps, how to check, what to return, and what a person must approve. Each command is the leaf the Commands section names. A tree search, a truncated listing, a machine path, `npm`, `npx`, or a repeated project command that is not `pnpm run` scores 0. | The added command, agent, or hook has the when, steps, and check the page you opened requires, and its commands follow Commands. | Every skill and command is one workflow, and its commands follow Commands. |
 | Future-proof (15) | Contracts that can change are links to the pages you opened. Frontmatter the current page says is ignored is unset. | A remote MCP URL is the public HTTPS endpoint on the current docs index. | No component states a contract the docs own. |
 | Catalog (10) | README, manifest, license, and marketplace entry exist. The index matches the files. | Homepage and keywords are the plugin name and product terms. The README names every network endpoint and any credential. | The same is true for every component. |
 | Safety (10) | No secrets. Publish, tag, push, delete, send, and spend wait for the user. | The security section you opened would accept the hook or MCP server. | That section would accept every component. |

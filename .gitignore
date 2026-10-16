@@ -2,3 +2,7 @@
 __pycache__/
 *.pyc
 .playwright-mcp/
+node_modules/
+package-lock.json
+pnpm-lock.yaml
+yarn.lock

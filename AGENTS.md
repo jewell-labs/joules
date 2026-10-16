@@ -36,6 +36,8 @@ A Joules plugin has to fit one of these, and you say which:
 
 Grok Build skills that already appear in the session are used the same way. Call them. Do not copy them into `plugins/`.
 
+An installed guidance skill, such as `modern-web-guidance`, is evidence. When it does not help this job, or it contradicts this file, the plugin procedure, the current docs, or a decision the user already made, do not follow it. Ask the user. A past decision this pass shows is wrong is a question, not a silent rewrite.
+
 ## Future-proof
 
 This rule covers every plugin and skill in this repo.
@@ -64,7 +66,7 @@ This is the procedure for `joules-plugins`. Follow Official marketplace, Future-
    - https://github.com/xai-org/plugin-marketplace/blob/main/CONTRIBUTING.md
    - https://docs.x.ai/grok-bot/skills-routines-and-automations
    Apply Future-proof when the public page and the CLI disagree.
-3. Write each skill as one workflow. The description says what it does, when it runs, and the slash name. The body states when to use it, the inputs, the steps, how to check the result, what to return, and what a person must approve. Name the tools the steps use. A command in the body is an instruction for the agent to run. Link a living docs page for any contract that can change. The rubric belongs in the skill that judges. Do not add `RUBRIC.md`.
+3. Write each skill as one workflow. The description says what it does, when it runs, and the slash name. The body states when to use it, the inputs, the steps, how to check the result, what to return, and what a person must approve. Name the tools the steps use. A command in the body is an instruction for the agent to run. It is the leaf the Commands section of `plugins/joules-plugins/skills/author/SKILL.md` names. Link a living docs page for any contract that can change. The rubric belongs in the skill that judges. Do not add `RUBRIC.md`.
 4. Package the plugin by the Catalog section.
 5. Run `grok plugin validate plugins/<name>`. After the user asks to install, run `grok plugin install <name> --trust`, then `grok inspect` and confirm the skill source is `plugin: <name>`. Run `grok mcp doctor` when the plugin has an MCP server. Invoke `/<skill>` on a safe input. Run `grok plugin tag` only when the user asks to publish.
 6. Re-read the security section of the contributing page and reject the classes it rejects.
@@ -79,7 +81,7 @@ Write the skill body so the other hosts can follow it without a fork. A Grok Bot
 - Grok Build wiring follows the Build pages you opened this session.
 - grok.com reaches MCP over public HTTPS. Follow https://docs.x.ai/grok/connectors . A custom MCP server must be a public https URL. A stdio server does not satisfy that host. The docs MCP endpoint is the one https://docs.x.ai/llms.txt lists.
 - A Grok Bot follows the same procedure from this checkout. Its skills page is https://docs.x.ai/grok-bot/skills-routines-and-automations . That page describes skills saved in the app. It does not say how this marketplace installs. Say that, and still follow the skill body. The Bot computer can open the same public https links this session opens. Credentials are the environment variables the product docs name. The Bot does not read another machine's keychain or encrypted credential file. Add a routine only after the skill is reliable.
-- On this Mac, `CLOUDFLARE_API_TOKEN` is a login-keychain generic password. The service is `CLOUDFLARE_API_TOKEN`, the account is the macOS user, and the label is `void-workers`. The person stores it with `security add-generic-password` and puts `-w` last so the prompt takes the secret. A read is `security find-generic-password -w` piped into a client whose source is a file. Do not attach a heredoc to that command. A shell error must not receive the password as a program or an argument. Do not print the secret, do not pass `-A`, and do not put the secret on a command line. A Grok Bot does not read this keychain. A person sets the same variable there.
+- On this computer, the Cloudflare credential is the browser session from `void cloudflare login`. `void` is the global package. The CLI stores that session. Do not set an API token, key, or email, and do not read one from the keychain. A Grok Bot runs the same login on its own browser. It does not read this computer's keychain.
 - One-time sign-in uses a public https link. Do not encode a click path that exists on only one machine.
 - One browser client at a time. A public URL is an HTTP read. Open a browser only when the page needs a click, a signed-in session, JavaScript, or a screenshot.
 - WebMCP is the app's own tools at `/mcp`. It is not a browser driver. A page read the prompt names is WebMCP.
@@ -104,6 +106,7 @@ plugins/<plugin>/
   agents/<job>.md
   hooks/hooks.json
   .mcp.json
+  .lsp.json
 ```
 
 `joules-plugins` is the authoring parent. Its skill is `author`. Its commands are `create`, `evaluate`, `update`, and `score`. `web-app` is the app parent. Its skill is `scaffold`. Its commands are `plan`, `create`, `extend`, `validate`, `clone`, `deploy`, and `evaluate`.
@@ -112,11 +115,13 @@ A skill and a command in the same plugin do not share a name. The skill is the p
 
 Do not add a `scripts/` directory. The agent follows the skill and writes the result. A hook is the command the current hooks page runs, and it is not a second copy of the skill: https://docs.x.ai/build/features/hooks
 
+This repository has no Node package. Do not add `package.json`, a lockfile, or `node_modules`, and do not run `npm` or `pnpm install` in the repository root. A repeated command inside an app the `web-app` skill creates is that app's `scripts` entry, run with `pnpm run`.
+
 Copy this shape for a new plugin. Do not invent a second parent name for a part.
 
 ## Catalog
 
-- One plugin you author does one job, at `plugins/<name>/`. This repo ships `joules-plugins` for authoring and `web-app` for a new or extended app. `hello-note` and `sample-note` are the fixtures the joules-plugins run record names. Do not give them a second job. The app follows the `scaffold` skill and that plugin's plan, create, extend, validate, clone, and deploy commands.
+- One plugin you author does one job, at `plugins/<name>/`. This repo ships `joules-plugins` for authoring and `web-app` for a new or extended app. The joules-plugins run record names `hello-note` and `sample-note`. Those plugins are not in this repo. Do not add them back. The app follows the `scaffold` skill and that plugin's plan, create, extend, validate, clone, and deploy commands.
 - List it in `.grok-plugin/marketplace.json`. Match the fields already in that file.
 - When `.grok-plugin/plugin-index.json` exists, list the components you actually added.
 - A plugin that lives in this repo uses a local source path.

@@ -20,7 +20,7 @@ Plugin version: 0.7.0
 | --- | --- | --- | --- | --- |
 | load | Judge | Load | `grok plugin validate` exits 0. | jp-create: fail |
 | job | Judge | Job | One job. Exclusive, on top of a named official plugin, or still useful without it. | jp-create: fail |
-| procedure | Judge | Procedure | The description says what it does, when it runs, and the slash name. The body has the steps, the check, the return, and the approval. | jp-create: fail |
+| procedure | Judge | Procedure | The description says what it does, when it runs, and the slash name. The body has the steps, the check, the return, and the approval. Each command is the leaf the Commands section names. A Node command runs with pnpm. | jp-create: fail |
 | future-proof | Judge | Future-proof | A contract that can change is a link to the page opened for that run. | jp-create: fail |
 | catalog | Judge | Catalog | README, manifest, license, and marketplace entry exist, and the index matches the files. | jp-create: fail |
 | safety | Judge | Safety | No secrets. Publish, tag, push, and spend wait for the user. | jp-create: fail |
@@ -34,7 +34,7 @@ Plugin version: 0.7.0
 
 ## Last run
 
-The table between the markers is the run record. Each Prompt cell is the whole job. Evaluate writes When, Result, and the points. It writes an Evals token only for the ids in Rows. Expect `fail` records `pass` on those ids when Result is fail.
+The table between the markers is the run record. Each Prompt cell is the whole job for that past run. Evaluate writes When, Result, and the points. It writes an Evals token only for the ids in Rows. Expect `fail` records `pass` on those ids when Result is fail. `hello-note` and `sample-note` are not plugins in this repository. Do not create them again.
 
 <!-- eval-status:start -->
 | Id | Prompt | Rows | Expect | When | Result | Load | Job | Procedure | Future-proof | Catalog | Safety | Components | Hosts | Behavior | Usage |

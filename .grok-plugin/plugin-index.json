@@ -48,7 +48,7 @@
         "skills": [
           {
             "name": "scaffold",
-            "description": "Write or extend a Void pages app from the current docs. The app persists each deploy on Cloudflare and serves one public HTTP healthcheck."
+            "description": "Write or extend a Void pages app from the current docs. The app deploys with Void and serves one public HTTP healthcheck."
           }
         ],
         "commands": [
@@ -85,28 +85,6 @@
           {
             "name": "typescript",
             "description": "TypeScript language server for .ts and .tsx."
-          }
-        ]
-      }
-    },
-    "hello-note": {
-      "version": "0.1.0",
-      "components": {
-        "skills": [
-          {
-            "name": "hello-note",
-            "description": "Reply with the single word hello."
-          }
-        ]
-      }
-    },
-    "sample-note": {
-      "version": "0.1.0",
-      "components": {
-        "skills": [
-          {
-            "name": "note",
-            "description": "Fixture with no steps."
           }
         ]
       }

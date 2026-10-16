@@ -16,9 +16,9 @@ grok plugin install joules-plugins --trust
 | Plugin | What it adds |
 | --- | --- |
 | [joules-plugins](plugins/joules-plugins) | Creates, evaluates, updates, and scores one plugin. The rubric covers a single skill through a plugin with several components. |
-| [web-app](plugins/web-app) | Creates or extends a Void pages app. The app is Solid on Cloudflare Workers, adds a page, a table, or a stream as one change, persists each deploy so another computer can clone that version, deploys with Void, and serves one public HTTP healthcheck. |
+| [web-app](plugins/web-app) | Creates or extends a Void pages app. The app is Solid on Cloudflare Workers, adds a page, a table, or a stream as one change, deploys with Void, and serves one public HTTP healthcheck. |
 
-`hello-note` and `sample-note` are fixtures named by the joules-plugins run record. The hello-note skill path repeats the plugin name because that prompt requires `skills/hello-note/SKILL.md`.
+The joules-plugins run record names `hello-note` and `sample-note`. Those plugins are not in this repository. Do not add them back.
 
 ## Add a plugin
 
