@@ -2,7 +2,7 @@
   "version": 1,
   "plugins": {
     "joules-plugins": {
-      "version": "0.6.0",
+      "version": "0.7.0",
       "components": {
         "skills": [
           {
@@ -17,7 +17,7 @@
           },
           {
             "name": "evaluate",
-            "description": "Score one plugin against the rubric."
+            "description": "Score one plugin and write that run-record row."
           },
           {
             "name": "update",
@@ -43,30 +43,64 @@
       }
     },
     "web-app": {
-      "version": "0.7.0",
+      "version": "0.12.0",
       "components": {
         "skills": [
           {
             "name": "scaffold",
-            "description": "Write a Void pages app from the current docs. The app releases listed branches and serves one public HTTP healthcheck."
+            "description": "Write or extend a Void pages app from the current docs. The app persists each deploy on Cloudflare and serves one public HTTP healthcheck."
           }
         ],
         "commands": [
           {
             "name": "plan",
-            "description": "Settle one web app's decisions, or ask one unknown."
+            "description": "Settle decisions for a new or extended app, or ask one unknown."
           },
           {
             "name": "create",
             "description": "Write a Void pages app from the plan reply."
           },
           {
+            "name": "extend",
+            "description": "Add the destinations, tables, and streams the prompt names."
+          },
+          {
             "name": "validate",
-            "description": "Run the app checks for each mapped branch."
+            "description": "Run the app checks. Does not deploy."
+          },
+          {
+            "name": "clone",
+            "description": "Clone one worker version onto this computer. Does not deploy."
+          },
+          {
+            "name": "deploy",
+            "description": "Deploy the app with Void and persist that version."
           },
           {
             "name": "evaluate",
-            "description": "Score the README prompt and write the table."
+            "description": "Score one README prompt and write that row."
+          }
+        ]
+      }
+    },
+    "hello-note": {
+      "version": "0.1.0",
+      "components": {
+        "skills": [
+          {
+            "name": "hello-note",
+            "description": "Reply with the single word hello."
+          }
+        ]
+      }
+    },
+    "sample-note": {
+      "version": "0.1.0",
+      "components": {
+        "skills": [
+          {
+            "name": "note",
+            "description": "Fixture with no steps."
           }
         ]
       }

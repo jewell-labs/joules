@@ -1,5 +1,5 @@
 ---
-description: Run the app checks for each mapped branch. Does not deploy.
+description: Run the app checks. Does not deploy.
 argument-hint: "[app directory]"
 ---
 

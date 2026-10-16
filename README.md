@@ -16,8 +16,10 @@ grok plugin install joules-plugins --trust
 | Plugin | What it adds |
 | --- | --- |
 | [joules-plugins](plugins/joules-plugins) | Creates, evaluates, updates, and scores one plugin. The rubric covers a single skill through a plugin with several components. |
-| [web-app](plugins/web-app) | Creates a Void pages app in a directory. The app is Solid on Cloudflare Workers, releases the branches it lists, and serves one public HTTP healthcheck. |
+| [web-app](plugins/web-app) | Creates or extends a Void pages app. The app is Solid on Cloudflare Workers, adds a page, a table, or a stream as one change, persists each deploy so another computer can clone that version, deploys with Void, and serves one public HTTP healthcheck. |
 | [local-grok-builder](plugins/local-grok-builder) | Fits a local GGUF suite to this machine and wires the chat Grok can run locally. `/doctor` only reports. |
+
+`hello-note` and `sample-note` are fixtures named by the joules-plugins run record. The hello-note skill path repeats the plugin name because that prompt requires `skills/hello-note/SKILL.md`.
 
 ## Apps
 
@@ -27,15 +29,13 @@ grok plugin install joules-plugins --trust
 
 ## Add a plugin
 
-Search the official catalog first. Then `/author` with `create`, `evaluate`, `update`, or `score`. `grok plugin validate plugins/<name>` is the manifest check. After you ask to install, `grok inspect` and `/author` on a safe input are the behavior check. The plugin README table is the run record. The prompt in that table is the whole job. Nothing else is stored.
+Search the official catalog first. Then `/author` with `create`, `evaluate`, `update`, or `score`. `grok plugin validate plugins/<name>` is the manifest check. After you ask to install, `grok inspect` and `/author` on a safe input are the behavior check. Each plugin README has the capability roadmap and the run record from the Records section of `plugins/joules-plugins/skills/author/SKILL.md`. The prompt in the run record is the whole job. Evaluate writes the scores.
 
 From this checkout, follow `AGENTS.md`.
 
 ## Hosts
 
-Grok Build is the install path today.
-
-grok.com and Grok Bot follow the same skill text. `joules-plugins` connects the docs MCP at the endpoint listed in <https://docs.x.ai/llms.txt>, so a bot or a grok.com custom connector can attach that server over HTTPS. Host-specific steps come from the current connector and Grok Bot pages.
+Grok Build is the install path in the commands above. Every other host follows the Hosts section of [AGENTS.md](AGENTS.md).
 
 ## Layout
 

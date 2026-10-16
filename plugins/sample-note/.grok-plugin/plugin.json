@@ -1,0 +1,13 @@
+{
+  "name": "sample-note",
+  "version": "0.1.0",
+  "description": "A fixture plugin that validates and does nothing else.",
+  "author": {
+    "name": "Joules",
+    "url": "https://github.com/jewell-labs/joules"
+  },
+  "homepage": "https://github.com/jewell-labs/joules/tree/main/plugins/sample-note",
+  "repository": "https://github.com/jewell-labs/joules",
+  "license": "MIT",
+  "keywords": ["joules", "sample-note"]
+}

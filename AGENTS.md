@@ -73,15 +73,23 @@ This is the procedure for `joules-plugins`. Follow Official marketplace, Future-
 
 Grok Build installs plugins from this marketplace. The commands are in the README.
 
-Write the skill body so the other hosts can follow it without a fork:
+Write the skill body so the other hosts can follow it without a fork. A Grok Bot that has this repository uses the same skills, the same commands, and the same connectors. It does not need a second copy of a plugin.
 
 - The skill body follows Build a plugin.
 - Grok Build wiring follows the Build pages you opened this session.
-- grok.com reaches MCP over public HTTPS. Follow the current connectors page. A stdio server does not satisfy that host.
-- A Grok Bot follows the same procedure and connects MCP the way the current Bot and connector pages describe. Add a routine only after the skill is reliable.
+- grok.com reaches MCP over public HTTPS. Follow https://docs.x.ai/grok/connectors . A custom MCP server must be a public https URL. A stdio server does not satisfy that host. The docs MCP endpoint is the one https://docs.x.ai/llms.txt lists.
+- A Grok Bot follows the same procedure from this checkout. Its skills page is https://docs.x.ai/grok-bot/skills-routines-and-automations . That page describes skills saved in the app. It does not say how this marketplace installs. Say that, and still follow the skill body. The Bot computer can open the same public https links this session opens. Credentials are the environment variables the product docs name. The Bot does not read another machine's keychain or encrypted credential file. Add a routine only after the skill is reliable.
+- On this Mac, `CLOUDFLARE_API_TOKEN` is a login-keychain generic password. The service is `CLOUDFLARE_API_TOKEN`, the account is the macOS user, and the label is `void-workers`. The person stores it with `security add-generic-password` and puts `-w` last so the prompt takes the secret. A read is `security find-generic-password -w` piped into a client whose source is a file. Do not attach a heredoc to that command. A shell error must not receive the password as a program or an argument. Do not print the secret, do not pass `-A`, and do not put the secret on a command line. A Grok Bot does not read this keychain. A person sets the same variable there.
+- One-time sign-in uses a public https link. Do not encode a click path that exists on only one machine.
+- One browser client at a time. A public URL is an HTTP read. Open a browser only when the page needs a click, a signed-in session, JavaScript, or a screenshot.
+- WebMCP is the app's own tools at `/mcp`. It is not a browser driver. A page read the prompt names is WebMCP.
+- The official `browser-use` plugin is the browser. Follow its installed skill. On this Mac it attaches to the person's running Chrome. The person allows remote debugging at `chrome://inspect/#remote-debugging` and clicks Allow. Do not launch a second Chrome, do not pass another profile, and do not type a password or a passkey.
+- A Grok Bot computer with no display uses that plugin's cloud browser, one per task, and stops it when the task ends. It does not read this Mac's Chrome profile. The person signs in on that browser when the page requires it.
+- `chrome-devtools` is not in this base set. Add it only for a performance trace, the console, or the network log, and stop `browser-use` first so two clients do not attach to the same Chrome.
+- Do not install a Safari driver. A person may open the page in Safari. The WebMCP polyfill covers that browser.
+- The `grok-web` server belongs to the grok.com skill and its own profile. Do not point it at a Worker or a Cloudflare dashboard, and do not run it while `browser-use` is attached to Chrome.
+- Do not install `computer-use`, Playwright, or a second browser MCP for this work.
 - Publish, tag, push, and install for other people only when the user asked.
-
-If the current page for a host does not yet say how this marketplace installs there, say that. Leave the skill as one procedure.
 
 ## Layout
 
@@ -98,7 +106,7 @@ plugins/<plugin>/
   .mcp.json
 ```
 
-`joules-plugins` is the authoring parent. Its skill is `author`. Its commands are `create`, `evaluate`, `update`, and `score`. `web-app` is the app parent. Its skill is `scaffold`. Its commands are `plan`, `create`, `validate`, and `evaluate`. `local-grok-builder` fits a local GGUF suite. Its skill is `fit`. Its command is `doctor`.
+`joules-plugins` is the authoring parent. Its skill is `author`. Its commands are `create`, `evaluate`, `update`, and `score`. `web-app` is the app parent. Its skill is `scaffold`. Its commands are `plan`, `create`, `extend`, `validate`, `clone`, `deploy`, and `evaluate`. `local-grok-builder` fits a local GGUF suite. Its skill is `fit`. Its command is `doctor`.
 
 A skill and a command in the same plugin do not share a name. The skill is the procedure. The command is the slash entry for one part of that procedure, and it points at that part instead of copying it.
 
@@ -108,7 +116,7 @@ Copy this shape for a new plugin. Do not invent a second parent name for a part.
 
 ## Catalog
 
-- One plugin you author does one job, at `plugins/<name>/`. This repo ships `joules-plugins` for authoring, `web-app` for a new app, and `local-grok-builder` for a local GGUF suite. A new app follows the `scaffold` skill and that plugin's plan, create, and validate commands.
+- One plugin you author does one job, at `plugins/<name>/`. This repo ships `joules-plugins` for authoring, `web-app` for a new or extended app, and `local-grok-builder` for a local GGUF suite. `hello-note` and `sample-note` are the fixtures the joules-plugins run record names. Do not give them a second job. The app follows the `scaffold` skill and that plugin's plan, create, extend, validate, clone, and deploy commands.
 - List it in `.grok-plugin/marketplace.json`. Match the fields already in that file.
 - When `.grok-plugin/plugin-index.json` exists, list the components you actually added.
 - A plugin that lives in this repo uses a local source path.
