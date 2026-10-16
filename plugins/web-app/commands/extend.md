@@ -3,6 +3,6 @@ description: Add the destinations, tables, and streams the prompt names.
 argument-hint: "[app directory]"
 ---
 
-When the message has no plan reply yet, follow the Plan section of `../skills/scaffold/SKILL.md` and stop.
+When the message has no plan reply yet, follow `../skills/decide/SKILL.md` and stop.
 
-Follow the Extend section of that skill. Do not ask again. Return what that section says to return.
+Follow `../skills/feature/SKILL.md`. Do not ask again. Return what that skill says to return.

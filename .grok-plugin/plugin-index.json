@@ -6,8 +6,20 @@
       "components": {
         "skills": [
           {
-            "name": "author",
-            "description": "Create, evaluate, update, or score one plugin from the current docs."
+            "name": "draft",
+            "description": "Create one plugin from the current docs and the rubric."
+          },
+          {
+            "name": "judge",
+            "description": "Score one plugin and write that run-record row."
+          },
+          {
+            "name": "revise",
+            "description": "Raise failed rubric rows, then validate again."
+          },
+          {
+            "name": "rate",
+            "description": "Report points and the change that raises them most."
           }
         ],
         "commands": [
@@ -47,8 +59,36 @@
       "components": {
         "skills": [
           {
-            "name": "scaffold",
-            "description": "Write or extend a Void pages app from the current docs. The app deploys with Void and serves one public HTTP healthcheck."
+            "name": "decide",
+            "description": "Return the command sheet for a Void pages app, or ask one question."
+          },
+          {
+            "name": "starter",
+            "description": "Write one Void pages app from a command sheet."
+          },
+          {
+            "name": "incoming",
+            "description": "Move an existing app onto Void pages without rewriting the foreign tree."
+          },
+          {
+            "name": "feature",
+            "description": "Add the tables, routes, crons, and queues a command sheet names."
+          },
+          {
+            "name": "check",
+            "description": "Run pnpm run build. Does not deploy."
+          },
+          {
+            "name": "fetch",
+            "description": "Put one worker version on this computer. Does not deploy."
+          },
+          {
+            "name": "publish",
+            "description": "Deploy, rewind, or preview a Void pages app."
+          },
+          {
+            "name": "score",
+            "description": "Score one README prompt and write that run-record row."
           }
         ],
         "commands": [
@@ -59,6 +99,10 @@
           {
             "name": "create",
             "description": "Write a Void pages app from the plan reply."
+          },
+          {
+            "name": "adopt",
+            "description": "Move an existing app onto Void pages. Does not rewrite a foreign tree."
           },
           {
             "name": "extend",

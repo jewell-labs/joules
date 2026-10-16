@@ -1,16 +1,16 @@
 # joules-plugins
 
-Creates, evaluates, updates, and scores a Grok plugin. The Rubric section of `skills/author/SKILL.md` is the matrix for every job, from a single skill to a plugin with several components.
+Creates, evaluates, updates, and scores a Grok plugin. The Rubric section of `skills/judge/SKILL.md` is the matrix. Each command has its own skill.
 
 ```bash
 grok plugin install joules-plugins --trust
 ```
 
-The parent name is `joules-plugins`. The skill is `/author`. Then run `create`, `evaluate`, `update`, or `score`. On the next session the plugin adds the marketplace URLs in `hooks/marketplaces.txt` and installs the plugins named in `hooks/plugins.txt`. License is MIT, the same terms as the repository `LICENSE`. Network calls are those git URLs, through `grok plugin`, and the docs MCP at the endpoint listed in <https://docs.x.ai/llms.txt>. None of them take a credential.
+The parent name is `joules-plugins`. The skills are `draft`, `judge`, `revise`, and `rate`. The commands are `create`, `evaluate`, `update`, and `score`. Each command points at one skill. On the next session the plugin adds the marketplace URLs in `hooks/marketplaces.txt` and installs the plugins named in `hooks/plugins.txt`. License is MIT, the same terms as the repository `LICENSE`. Network calls are those git URLs, through `grok plugin`, and the docs MCP at the endpoint listed in <https://docs.x.ai/llms.txt>. None of them take a credential.
 
 ## Capability roadmap
 
-The table between the markers lists what this plugin owns. `Evals` names the run that passed or failed that row. A token is `<id>: pass` or `<id>: fail`. Empty means no run has written it. `out of scope` means another plugin owns it. The Records section of `skills/author/SKILL.md` is the procedure every plugin uses. A full rubric cell for work the prompt omitted is not a token.
+The table between the markers lists what this plugin owns. `Evals` names the run that passed or failed that row. A token is `<id>: pass` or `<id>: fail`. Empty means no run has written it. `out of scope` means another plugin owns it. The Records section of `skills/judge/SKILL.md` is the procedure every plugin uses. A full rubric cell for work the prompt omitted is not a token.
 
 <!-- capability-roadmap:start -->
 

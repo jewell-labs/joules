@@ -1,12 +1,12 @@
 # web-app
 
-Creates or extends a Void pages app in a directory you choose. The app is Solid on Cloudflare Workers by default. A page, a table, or a stream is one addition. What a deploy records, and what Prepare checks before a spend, are the Persistence and Prepare sections of the skill. The app serves one public HTTP healthcheck. When the prompt names a page read, that page registers one WebMCP read tool, and that same read is at `/mcp` beside the healthcheck.
+Creates, adopts, or extends a Void pages app in a directory you choose. The app is Solid on Cloudflare Workers by default. A page, a table, or a stream is one addition. After the plan reply, the next command runs the sheet that reply names and finishes within five minutes. The app serves one public HTTP healthcheck. When the prompt names a page read, that page registers one WebMCP read tool, and that same read is at `/mcp` beside the healthcheck.
 
 ```bash
 grok plugin install web-app --trust
 ```
 
-The parent name is `web-app`. The skill is `/scaffold`. The commands are `plan`, `create`, `extend`, `validate`, `clone`, `deploy`, and `evaluate`. Each command points at that skill. License is MIT, the same terms as the repository `LICENSE`.
+The parent name is `web-app`. Each skill is one `SKILL.md`. The skills are `decide`, `starter`, `incoming`, `feature`, `check`, `fetch`, `publish`, and `score`. The commands are `plan`, `create`, `adopt`, `extend`, `validate`, `clone`, `deploy`, and `evaluate`. Each command points at one skill and does not copy it. A skill name and a command name stay different. License is MIT, the same terms as the repository `LICENSE`.
 
 A host that can read this repository follows this plugin. Host rules are the Hosts section of the repository `AGENTS.md`.
 
