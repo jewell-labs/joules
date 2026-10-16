@@ -29,6 +29,34 @@ The Rubric section is the only matrix. Do not invent a second rubric, and do not
 
 A child session returns a summary. The parent uses that summary. It does not look for a results file.
 
+## Records
+
+Every plugin README has two tables. Create writes both, with no scores. The roadmap ids are the capabilities this plugin owns. A prohibition is not an id. `out of scope` means another plugin owns that row.
+
+The capability roadmap sits between `<!-- capability-roadmap:start -->` and `<!-- capability-roadmap:end -->`, after the credential prose and before Last run. The line `Plugin version:` inside that block is the manifest version the scores belong to.
+
+| Id | Area | Item | Description | Evals |
+
+The run record sits between `<!-- eval-status:start -->` and `<!-- eval-status:end -->`.
+
+| Id | Prompt | Rows | Expect | When | Result | rubric columns of the skill that judges, in that order | Usage |
+
+A plugin that deploys an app adds `Version` and `URL` after `Usage`. Expect is `pass` or `fail`. Rows names the roadmap ids that prompt requires the product to perform. The next id is unique in that file. Its prefix is a short prefix of the plugin name.
+
+Evaluate writes one run-record row per turn. It does not change Id, Prompt, Rows, or Expect. It writes When, Result, the rubric points, and Usage. It writes Version and URL only when this run created them. It then rewrites the Evals cell of each id in Rows: drop this run's old token, then add `<run id>: pass` when Result equals Expect, or `<run id>: fail` when it does not. A prompt that expects fail records `pass` on those ids when Result is fail. It does not add an id Rows omits. A full rubric cell for a capability the prompt omitted is not coverage. It does not change `out of scope`. An empty Result leaves the Evals tokens as they are.
+
+The one file that run may write is that README, and only those cells. A prompt that forbids edits still allows that write. It forbids every other file. A missing grant leaves the row empty. Do not invent a score, and do not mark the row `out of scope`.
+
+Score does not write the README. Update may add roadmap rows and empty run-record rows. It does not copy points.
+
+### Release
+
+When the user asks to publish one plugin version, do not tag yet. Read `version` in that plugin's `.grok-plugin/plugin.json`. When it differs from `Plugin version:`, clear When, Result, the rubric points, Usage, Version, and URL on every run-record row, and clear every pass and fail token. Keep Id, Prompt, Rows, Expect, and `out of scope`. Set `Plugin version:` to the manifest version.
+
+Follow that plugin's evaluate command for each run-record row whose Result is empty and whose prompt does not ask for a live deploy. Run at most one row whose prompt asks for a live deploy. When a grant is missing, leave that row empty. The README write Records allows still applies when the prompt forbids other edits.
+
+Ready to tag means every run-record row has a Result and no Evals token is `fail`. An empty roadmap cell has no eval yet. It stays visible and does not block the tag. Report that. Run `grok plugin tag` only when the user asked to publish and the record is ready. The tag command is the one the plugins chapter shipped with `grok` documents. Push only when the user asked to push. Do not add a workflow or a script for this loop.
+
 Follow the Build a plugin section of Joules `AGENTS.md`. In this repository that file is at the repo root. Otherwise read https://raw.githubusercontent.com/jewell-labs/joules/main/AGENTS.md. The create command names the docs pages to open.
 
 Publish, tag, push, or install for anyone else only when the user asked.
@@ -67,4 +95,4 @@ Creating fills this matrix after the files exist.
 
 ### Test runs
 
-A run is the reply in this turn. Fill every row. A missing row is a fail. Points are the cell in the matching column, or 0. Evidence is the `grok plugin validate` output and a file opened during the turn. State that evidence in the reply. Do not save a transcript, a log, or a score file beside the plugin.
+A run is the reply in this turn. Fill every row. A missing row is a fail. Points are the cell in the matching column, or 0. Evidence is the `grok plugin validate` output and a file opened during the turn. State that evidence in the reply. When the prompt is a run-record row, write that row the way Records describes. Do not save a transcript, a log, or a score file beside the plugin.

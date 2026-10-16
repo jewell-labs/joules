@@ -9,7 +9,7 @@
       "name": "joules-plugins",
       "description": "Create, evaluate, update, or score one Grok plugin from the current docs and one rubric.",
       "category": "development",
-      "version": "0.6.0",
+      "version": "0.7.0",
       "author": "Joules",
       "homepage": "https://github.com/jewell-labs/joules/tree/main/plugins/joules-plugins",
       "keywords": ["joules", "joules-plugins"],
@@ -24,7 +24,7 @@
       "name": "web-app",
       "description": "Create or extend a Void pages app on Cloudflare Workers. A page, a table, or a stream is one addition. The app persists each deploy so another computer can clone that version, deploys with Void, and serves one public HTTP healthcheck.",
       "category": "development",
-      "version": "0.11.1",
+      "version": "0.12.0",
       "author": "Joules",
       "homepage": "https://github.com/jewell-labs/joules/tree/main/plugins/web-app",
       "keywords": ["web-app", "void", "cloudflare", "solid", "mcp", "webmcp"],
@@ -33,6 +33,36 @@
       "source": {
         "type": "local",
         "path": "./plugins/web-app"
+      }
+    },
+    {
+      "name": "hello-note",
+      "description": "Reply with the single word hello.",
+      "category": "development",
+      "version": "0.1.0",
+      "author": "Joules",
+      "homepage": "https://github.com/jewell-labs/joules/tree/main/plugins/hello-note",
+      "keywords": ["joules", "hello-note"],
+      "domains": [],
+      "tags": ["fixture"],
+      "source": {
+        "type": "local",
+        "path": "./plugins/hello-note"
+      }
+    },
+    {
+      "name": "sample-note",
+      "description": "A fixture plugin that validates and does nothing else.",
+      "category": "development",
+      "version": "0.1.0",
+      "author": "Joules",
+      "homepage": "https://github.com/jewell-labs/joules/tree/main/plugins/sample-note",
+      "keywords": ["joules", "sample-note"],
+      "domains": [],
+      "tags": ["fixture"],
+      "source": {
+        "type": "local",
+        "path": "./plugins/sample-note"
       }
     }
   ]

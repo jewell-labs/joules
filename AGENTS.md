@@ -116,7 +116,7 @@ Copy this shape for a new plugin. Do not invent a second parent name for a part.
 
 ## Catalog
 
-- One plugin you author does one job, at `plugins/<name>/`. This repo ships `joules-plugins` for authoring and `web-app` for a new or extended app. The app follows the `scaffold` skill and that plugin's plan, create, extend, validate, clone, and deploy commands.
+- One plugin you author does one job, at `plugins/<name>/`. This repo ships `joules-plugins` for authoring and `web-app` for a new or extended app. `hello-note` and `sample-note` are the fixtures the joules-plugins run record names. Do not give them a second job. The app follows the `scaffold` skill and that plugin's plan, create, extend, validate, clone, and deploy commands.
 - List it in `.grok-plugin/marketplace.json`. Match the fields already in that file.
 - When `.grok-plugin/plugin-index.json` exists, list the components you actually added.
 - A plugin that lives in this repo uses a local source path.

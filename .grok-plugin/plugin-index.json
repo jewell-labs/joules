@@ -2,7 +2,7 @@
   "version": 1,
   "plugins": {
     "joules-plugins": {
-      "version": "0.6.0",
+      "version": "0.7.0",
       "components": {
         "skills": [
           {
@@ -17,7 +17,7 @@
           },
           {
             "name": "evaluate",
-            "description": "Score one plugin against the rubric."
+            "description": "Score one plugin and write that run-record row."
           },
           {
             "name": "update",
@@ -43,7 +43,7 @@
       }
     },
     "web-app": {
-      "version": "0.11.1",
+      "version": "0.12.0",
       "components": {
         "skills": [
           {
@@ -79,6 +79,28 @@
           {
             "name": "evaluate",
             "description": "Score one README prompt and write that row."
+          }
+        ]
+      }
+    },
+    "hello-note": {
+      "version": "0.1.0",
+      "components": {
+        "skills": [
+          {
+            "name": "hello-note",
+            "description": "Reply with the single word hello."
+          }
+        ]
+      }
+    },
+    "sample-note": {
+      "version": "0.1.0",
+      "components": {
+        "skills": [
+          {
+            "name": "note",
+            "description": "Fixture with no steps."
           }
         ]
       }

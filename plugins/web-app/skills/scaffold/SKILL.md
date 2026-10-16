@@ -180,14 +180,16 @@ When the user did not name a directory to keep, and Evaluate does not still need
 
 ## Evaluate
 
+The table shape and the publish loop are the Records section of the joules-plugins skill `author`. This section is the app evidence. Write When, Result, the rubric points, and Usage on that one row. Write Version and URL only when this run created them. Leave Id, Prompt, Rows, and Expect unchanged. On each roadmap id in Rows, drop this run's old token and add `<run id>: pass` when Result equals Expect, or `<run id>: fail` when it does not. Leave every other roadmap cell, including `out of scope`, unchanged. When `author` is not in the checkout, the headers in this plugin's README are the record and this paragraph is the write rule. Publishing the plugin version is that Release section. This section does not tag.
+
 Read the Prompt cells in this plugin's `README.md`, between `<!-- eval-status:start -->` and `<!-- eval-status:end -->`.
 
 Score the row the user named. When they did not name one, score the first row whose Result cell is empty. One prompt per run. Do not reuse a directory from another row.
 
 1. Keep `{{dest}}` in the file. When the user did not name a directory, substitute a temporary directory for `{{dest}}` in the prompt you follow.
-2. Follow Plan, then Create. Create follows Extend for every destination, table, and stream that prompt names. Create follows Prepare and Deploy when that prompt asks for a Worker.
+2. Follow Plan, then Create. Create follows Extend for every destination, table, and stream that prompt names. Create follows Prepare and Deploy when that prompt asks for a Worker. When the prompt says to clone that version, follow Clone into a second temporary directory and do not deploy the clone.
 3. When Prepare returns a missing grant, do not write a score. Leave that row empty. Return the missing grant and its link. Leave the directory.
-4. Otherwise follow Validate, then score that app with the Rubric section. A prompt that asks for a Worker is scored from the live worker URL, the live `/mcp` call, the version id from `npx void project status`, and a read of the archive for that version. Send a browser user agent on the live calls. A prompt that says not to deploy is scored from the source and from the validate return. Rewrite only that row inside the marker block. A row is its points or 0. A rubric row whose capability the prompt does not ask for is full when the app omits that capability too. Usage is `-` unless this turn's summary shows usage. The row names the worker URL and the version id only when this run created them, and it contains no secrets. Do not write a log.
+4. Otherwise follow Validate, then score that app with the Rubric section. A prompt that asks for a Worker is scored from the live worker URL, the live `/mcp` call, the version id from `npx void project status`, and a read of the archive for that version. Send a browser user agent on the live calls. A prompt that says not to deploy is scored from the source and from the validate return. A row is its points or 0. A rubric row whose capability the prompt does not ask for is full when the app omits that capability too. That full cell does not add a roadmap id. Usage is `-` unless this turn's summary shows usage. The row contains no secrets. Write the row the way the opening paragraph describes. Do not write a log.
 5. Return the row you wrote.
 
 When the user did not name a directory to keep, delete the destination after the row is written. When the row is not written, leave the directory.

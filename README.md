@@ -18,9 +18,11 @@ grok plugin install joules-plugins --trust
 | [joules-plugins](plugins/joules-plugins) | Creates, evaluates, updates, and scores one plugin. The rubric covers a single skill through a plugin with several components. |
 | [web-app](plugins/web-app) | Creates or extends a Void pages app. The app is Solid on Cloudflare Workers, adds a page, a table, or a stream as one change, persists each deploy so another computer can clone that version, deploys with Void, and serves one public HTTP healthcheck. |
 
+`hello-note` and `sample-note` are fixtures named by the joules-plugins run record. The hello-note skill path repeats the plugin name because that prompt requires `skills/hello-note/SKILL.md`.
+
 ## Add a plugin
 
-Search the official catalog first. Then `/author` with `create`, `evaluate`, `update`, or `score`. `grok plugin validate plugins/<name>` is the manifest check. After you ask to install, `grok inspect` and `/author` on a safe input are the behavior check. The plugin README table is the run record. The prompt in that table is the whole job. Nothing else is stored.
+Search the official catalog first. Then `/author` with `create`, `evaluate`, `update`, or `score`. `grok plugin validate plugins/<name>` is the manifest check. After you ask to install, `grok inspect` and `/author` on a safe input are the behavior check. Each plugin README has the capability roadmap and the run record from the Records section of `plugins/joules-plugins/skills/author/SKILL.md`. The prompt in the run record is the whole job. Evaluate writes the scores.
 
 From this checkout, follow `AGENTS.md`.
 
